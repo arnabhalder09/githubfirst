@@ -1,0 +1,5 @@
+auth/meta-session.json
+.env
+node_modules/
+dist/
+error-screenshot.png
