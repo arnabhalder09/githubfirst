@@ -3,7 +3,7 @@ import { useState, useRef, useCallback } from "react";
 import { Upload, Film, FileVideo, X, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface VideoUploaderProps {
-  onVideoUploaded: (file: File, url: string) => void;
+  onVideoUploaded: (file: File, url: string, duration: number) => void;
 }
 
 export default function VideoUploader({ onVideoUploaded }: VideoUploaderProps) {
@@ -19,12 +19,24 @@ export default function VideoUploader({ onVideoUploaded }: VideoUploaderProps) {
       setUploadState("error");
       return;
     }
+
+    const url = URL.createObjectURL(file);
+
+    // Detect duration via metadata — runs concurrently with progress simulation
+    let detectedDuration = 0;
+    const vid = document.createElement("video");
+    vid.preload = "metadata";
+    vid.onloadedmetadata = () => {
+      detectedDuration = isFinite(vid.duration) ? Math.round(vid.duration) : 0;
+      vid.src = "";
+    };
+    vid.src = url;
+
     setFileName(file.name);
     setFileSize((file.size / (1024 * 1024)).toFixed(1) + " MB");
     setUploadState("uploading");
     setUploadProgress(0);
 
-    // Simulate upload progress
     let p = 0;
     const interval = setInterval(() => {
       p += Math.random() * 18 + 4;
@@ -33,8 +45,7 @@ export default function VideoUploader({ onVideoUploaded }: VideoUploaderProps) {
         clearInterval(interval);
         setTimeout(() => {
           setUploadState("done");
-          const url = URL.createObjectURL(file);
-          onVideoUploaded(file, url);
+          onVideoUploaded(file, url, detectedDuration);
         }, 400);
       }
       setUploadProgress(Math.min(p, 100));

@@ -23,7 +23,7 @@ const STEP_LABELS: Record<string, string> = {
   failed:     "Generation failed",
 };
 
-export function useHiggsfieldJob() {
+export function useHiggsfieldJob(endpoint = "/api/higgsfield/generate") {
   const [result, setResult] = useState<JobResult>({
     jobId: null, status: "idle", progress: 0, stepLabel: "", videoUrl: null, error: null,
   });
@@ -74,7 +74,7 @@ export function useHiggsfieldJob() {
     setResult({ jobId: null, status: "submitting", progress: 5, stepLabel: "Submitting to Higgsfield...", videoUrl: null, error: null });
 
     try {
-      const res = await fetch("/api/higgsfield/generate", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
