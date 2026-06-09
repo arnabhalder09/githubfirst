@@ -239,12 +239,19 @@ async def debug_probe() -> dict:
     candidates = [
         # control: a known-good model — should NOT be 404 if the probe works.
         "higgsfield-ai/soul/standard",
-        "canvas", "higgsfield-ai/canvas", "higgsfield-ai/canvas/standard",
-        "banana_placement", "higgsfield-ai/banana_placement",
-        "higgsfield-ai/banana-placement/standard",
-        "higgsfield-ai/product-placement/standard", "product-placement",
-        "nano-banana-pro", "higgsfield-ai/nano-banana-pro/standard",
-        "kontext", "higgsfield-ai/kontext/standard",
+        # Nano Banana = Google Gemini image
+        "google/nano-banana", "google/nano-banana-pro", "google/nano-banana/edit",
+        "google/nano-banana/image-to-image",
+        # Kontext = Black Forest Labs FLUX Kontext
+        "black-forest-labs/flux-kontext", "bfl/flux-kontext",
+        "black-forest-labs/flux-1-kontext", "flux-kontext/dev",
+        # Seedream = ByteDance
+        "bytedance/seedream/v4", "bytedance/seedream/v4/text-to-image",
+        "bytedance/seedream/v3/text-to-image",
+        # Flux 2 + higgsfield-prefixed product/edit variants
+        "black-forest-labs/flux-2", "higgsfield/canvas",
+        "higgsfield/banana-placement", "higgsfield-ai/canvas/preview",
+        "reve/text-to-image",
     ]
     headers = {
         "Authorization": _auth_header(),
