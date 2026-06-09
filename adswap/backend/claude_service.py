@@ -22,8 +22,11 @@ SYSTEM_PROMPT = (
     "generated-content video ad and its transcript with timestamps, analyze the "
     "ad's structure. Identify which time segments show a person (UGC character) "
     "talking to camera versus product B-roll, the overall tone, the hook(s), and "
-    "the call-to-action timestamps. Respond ONLY with JSON matching the requested "
-    "schema."
+    "the call-to-action timestamps. Also identify THE PRODUCT being advertised and "
+    "describe it precisely enough that an image model could recreate it faithfully: "
+    "its name/category, exact color(s), shape, relative size, material/finish, and "
+    "any visible text, logo, or labeling. Respond ONLY with JSON matching the "
+    "requested schema."
 )
 
 # JSON schema we ask Claude to fill in (described in the prompt for older models
@@ -40,6 +43,11 @@ SCHEMA_HINT = {
     "tone": "string",
     "hooks": [{"timestamp": "float seconds", "text": "string"}],
     "cta_timestamps": ["float seconds"],
+    "product": {
+        "name": "short product name/category",
+        "description": "precise visual description: color(s), shape, size, material/finish, visible text or logo",
+        "colors": ["dominant color words"],
+    },
 }
 
 
@@ -62,6 +70,11 @@ def _mock_analysis(transcript: dict) -> dict:
         "tone": "casual, enthusiastic, authentic",
         "hooks": [{"timestamp": 0.0, "text": segments[0]["text"]}] if segments else [],
         "cta_timestamps": cta,
+        "product": {
+            "name": "the featured product",
+            "description": "the product shown in the original video",
+            "colors": [],
+        },
         "mock": True,
     }
 

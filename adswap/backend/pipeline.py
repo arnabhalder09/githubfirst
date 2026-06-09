@@ -128,6 +128,7 @@ async def process_job(job_id: str) -> None:
                 variation_index=i,
                 output_dir=out_dir,
                 on_stage=_on_stage,
+                scene_analysis=scene_analysis,
             )
             v.stage = "done"
             v.status = result.get("status", "complete")

@@ -89,6 +89,7 @@ async def higgsfield_swap_character(
     variation_index: int,
     output_dir: Path,
     on_stage=None,
+    scene_analysis: dict | None = None,
 ) -> dict:
     video_path = Path(video_path)
     output_dir = Path(output_dir)
@@ -100,7 +101,8 @@ async def higgsfield_swap_character(
 
     try:
         return await _real_swap(
-            video_path, transcript, avatar_label, variation_index, output_dir, on_stage
+            video_path, transcript, avatar_label, variation_index, output_dir,
+            on_stage, scene_analysis,
         )
     except Exception as exc:  # noqa: BLE001 — fall back so one bad call doesn't kill the job
         result = await _mock_swap(video_path, output_dir, avatar_label, variation_index, on_stage)
@@ -159,6 +161,7 @@ async def _real_swap(
     variation_index: int,
     output_dir: Path,
     on_stage=None,
+    scene_analysis: dict | None = None,
 ) -> dict:
     import httpx
 
@@ -169,6 +172,12 @@ async def _real_swap(
     }
     script = (transcript.get("text", "") or "").strip()
 
+    # Describe the real product so the generated one matches as closely as the
+    # text-to-image model allows (true pixel match needs image-reference models).
+    product = (scene_analysis or {}).get("product") or {}
+    prod_name = product.get("name") or "the featured product"
+    prod_desc = product.get("description") or ""
+
     async with httpx.AsyncClient(timeout=60) as client:
         # Step 1: generate a new presenter image (text-to-image).
         _emit(on_stage, "generating_image")
@@ -176,7 +185,9 @@ async def _real_swap(
             "prompt": (
                 f"Photorealistic vertical portrait of a {avatar_label}, a UGC content "
                 f"creator filming a selfie-style product review, looking directly at "
-                f"the camera, natural lighting, holding a product, candid and authentic"
+                f"the camera, natural lighting, candid and authentic, clearly holding "
+                f"{prod_name}. The product must look exactly like this: {prod_desc}. "
+                f"Reproduce its exact color, shape, size, and any labeling."
             ),
             "aspect_ratio": "9:16",
             "resolution": "720p",
