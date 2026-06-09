@@ -17,13 +17,37 @@ async function json(res) {
 export const api = {
   health: () => fetch(`${BASE}/health`).then(json),
 
-  createJob: ({ file, numVariations, avatarStyle }) => {
-    const form = new FormData();
-    form.append("file", file);
-    form.append("num_variations", numVariations);
-    form.append("avatar_style", avatarStyle);
-    return fetch(`${BASE}/jobs`, { method: "POST", body: form }).then(json);
-  },
+  // Uses XHR (not fetch) so we can report upload progress via onProgress(pct).
+  createJob: ({ file, numVariations, avatarStyle, onProgress }) =>
+    new Promise((resolve, reject) => {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("num_variations", numVariations);
+      form.append("avatar_style", avatarStyle);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${BASE}/jobs`);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          let detail = xhr.statusText;
+          try {
+            detail = JSON.parse(xhr.responseText).detail ?? detail;
+          } catch {
+            /* ignore */
+          }
+          reject(new Error(detail));
+        }
+      };
+      xhr.onerror = () => reject(new Error("Network error during upload"));
+      xhr.send(form);
+    }),
 
   listJobs: () => fetch(`${BASE}/jobs`).then(json),
   getJob: (id) => fetch(`${BASE}/jobs/${id}`).then(json),

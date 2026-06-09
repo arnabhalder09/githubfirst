@@ -12,6 +12,7 @@ export default function Upload() {
   const [avatarStyle, setAvatarStyle] = useState("diverse_cast");
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadPct, setUploadPct] = useState(0);
   const [error, setError] = useState(null);
   const [health, setHealth] = useState(null);
 
@@ -29,15 +30,27 @@ export default function Upload() {
   const submit = async () => {
     if (!file) return;
     setSubmitting(true);
+    setUploadPct(0);
     setError(null);
     try {
-      const { job_id } = await api.createJob({ file, numVariations, avatarStyle });
+      const { job_id } = await api.createJob({
+        file,
+        numVariations,
+        avatarStyle,
+        onProgress: setUploadPct,
+      });
       navigate(`/results/${job_id}`);
     } catch (e) {
       setError(e.message);
       setSubmitting(false);
     }
   };
+
+  const buttonLabel = !submitting
+    ? "Generate variations"
+    : uploadPct < 100
+      ? `Uploading… ${uploadPct}%`
+      : "Starting pipeline…";
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
@@ -126,10 +139,22 @@ export default function Upload() {
       <button
         onClick={submit}
         disabled={!file || submitting}
-        className="mt-8 w-full rounded-xl bg-brand hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed py-3 font-semibold transition-colors"
+        className="mt-8 w-full rounded-xl bg-brand hover:bg-brand-dark disabled:opacity-60 disabled:cursor-not-allowed py-3 font-semibold transition-colors flex items-center justify-center gap-2"
       >
-        {submitting ? "Starting…" : "Generate variations"}
+        {submitting && (
+          <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+        )}
+        {buttonLabel}
       </button>
+
+      {submitting && uploadPct < 100 && (
+        <div className="mt-3 h-1.5 rounded-full bg-neutral-800 overflow-hidden">
+          <div
+            className="h-full bg-brand transition-all duration-200"
+            style={{ width: `${Math.max(2, uploadPct)}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }
