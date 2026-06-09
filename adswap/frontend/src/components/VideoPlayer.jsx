@@ -28,6 +28,9 @@ export default function VideoPlayer({ variation }) {
           </a>
         )}
       </div>
+      {variation.note && (
+        <p className="px-3 pb-3 -mt-1 text-xs text-amber-400/90">{variation.note}</p>
+      )}
     </div>
   );
 }

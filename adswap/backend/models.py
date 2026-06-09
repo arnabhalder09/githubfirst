@@ -87,6 +87,9 @@ class Variation(Base):
     video_path = Column(String, nullable=True)  # path on disk (relative to OUTPUT_DIR)
     thumbnail_path = Column(String, nullable=True)
     external_job_id = Column(String, nullable=True)  # Higgsfield job id when applicable
+    # If real generation failed and we fell back to copying the source, the
+    # underlying error is recorded here so the UI can explain what happened.
+    note = Column(Text, nullable=True)
 
     job = relationship("Job", back_populates="variations")
 
@@ -103,4 +106,5 @@ class Variation(Base):
             if self.thumbnail_path
             else None,
             "external_job_id": self.external_job_id,
+            "note": self.note,
         }

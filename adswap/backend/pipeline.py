@@ -125,6 +125,12 @@ async def process_job(job_id: str) -> None:
             )
             v.status = result.get("status", "complete")
             v.external_job_id = result.get("external_job_id")
+            # Surface a fallback/error note: real generation failed (copied
+            # source instead), or we're running in mock mode.
+            if result.get("generation_error"):
+                v.note = f"Generation fell back to source copy: {result['generation_error']}"
+            elif result.get("mock"):
+                v.note = "Mock mode — output is a copy of the source (no API key set)."
             if result.get("video_filename"):
                 v.video_path = relative_output(out_dir / result["video_filename"])
             if result.get("thumbnail_filename"):
