@@ -164,6 +164,41 @@ async def remix_job(
     return {"job_id": new_id, "remixed_from": job_id, "status": new_job.status.value}
 
 
+@app.get("/debug/higgsfield")
+async def debug_higgsfield() -> dict:
+    """Credentials + auth diagnostic (never returns secret values).
+
+    Does a credit-free authenticated probe: a 404 means auth is accepted (the
+    random request id just doesn't exist); a 401/403 means the key/secret are
+    wrong; a 500 points at an account/server issue.
+    """
+    import httpx
+
+    from higgsfield_service import _auth_header
+
+    info: dict = {
+        "has_key": bool(config.HIGGSFIELD_API_KEY),
+        "key_length": len(config.HIGGSFIELD_API_KEY),
+        "key_contains_colon": ":" in config.HIGGSFIELD_API_KEY,
+        "has_secret": bool(config.HIGGSFIELD_API_SECRET),
+        "secret_length": len(config.HIGGSFIELD_API_SECRET),
+        "base_url": config.HIGGSFIELD_BASE_URL,
+        "image_model": config.HIGGSFIELD_IMAGE_MODEL_ID,
+        "video_model": config.HIGGSFIELD_MODEL_ID,
+    }
+    probe = f"{config.HIGGSFIELD_BASE_URL}/requests/00000000-0000-0000-0000-000000000000/status"
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(
+                probe, headers={"Authorization": _auth_header(), "Accept": "application/json"}
+            )
+        info["auth_probe_status"] = r.status_code
+        info["auth_probe_body"] = r.text[:300]
+    except Exception as exc:  # noqa: BLE001
+        info["auth_probe_error"] = str(exc)
+    return info
+
+
 @app.get("/jobs/{job_id}/download")
 def download_all(job_id: str, db: Session = Depends(get_session)) -> StreamingResponse:
     job = _get_job_or_404(db, job_id)
