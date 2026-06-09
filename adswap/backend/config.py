@@ -25,6 +25,9 @@ HIGGSFIELD_API_KEY = os.getenv("HIGGSFIELD_API_KEY", "").strip()
 # Model used for scene analysis.
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 
+# Higgsfield API base URL — override once you have the real endpoint.
+HIGGSFIELD_BASE_URL = os.getenv("HIGGSFIELD_BASE_URL", "https://api.higgsfield.ai/v1").rstrip("/")
+
 # ── Storage layout (S3-ready folder structure) ───────────────────────────────
 # Override STORAGE_ROOT to point at a mounted bucket / different volume.
 STORAGE_ROOT = Path(os.getenv("STORAGE_ROOT", PROJECT_ROOT)).resolve()

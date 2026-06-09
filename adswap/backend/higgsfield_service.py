@@ -18,7 +18,7 @@ from pathlib import Path
 
 import config
 
-BASE_URL = "https://api.higgsfield.ai/v1"
+BASE_URL = config.HIGGSFIELD_BASE_URL
 
 # Maps the UI avatar-style choices to (label, descriptive prompt) pairs. The
 # diverse cast cycles through a small roster so each variation looks distinct.
