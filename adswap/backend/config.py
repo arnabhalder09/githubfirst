@@ -28,7 +28,13 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 # Higgsfield API. Auth is "Key {key}:{secret}"; requests POST to /{model_id}.
 HIGGSFIELD_BASE_URL = os.getenv("HIGGSFIELD_BASE_URL", "https://platform.higgsfield.ai").rstrip("/")
 HIGGSFIELD_API_SECRET = os.getenv("HIGGSFIELD_API_SECRET", "").strip()
-HIGGSFIELD_MODEL_ID = os.getenv("HIGGSFIELD_MODEL_ID", "").strip().strip("/")
+# Two-step generation: text-to-image (new presenter) → image-to-video (animate).
+HIGGSFIELD_IMAGE_MODEL_ID = os.getenv(
+    "HIGGSFIELD_IMAGE_MODEL_ID", "higgsfield-ai/soul/standard"
+).strip().strip("/")
+HIGGSFIELD_MODEL_ID = os.getenv(
+    "HIGGSFIELD_MODEL_ID", "higgsfield-ai/dop/standard"
+).strip().strip("/")
 
 # ── Storage layout (S3-ready folder structure) ───────────────────────────────
 # Override STORAGE_ROOT to point at a mounted bucket / different volume.

@@ -108,7 +108,33 @@ def _auth_header() -> str:
 def _raise_for_body(resp) -> None:
     """Like raise_for_status, but include the response body for diagnosis."""
     if resp.status_code >= 400:
-        raise RuntimeError(f"HTTP {resp.status_code} from {resp.request.url}: {resp.text[:500]}")
+        raise RuntimeError(f"HTTP {resp.status_code} from {resp.request.url}: {resp.text[:400]}")
+
+
+async def _submit_and_poll(client, model_id: str, body: dict, headers: dict) -> tuple[dict, str]:
+    """Submit a generation request to /{model_id} and poll until completed.
+
+    Returns (completed_response_json, request_id). Follows the documented async
+    pattern: POST returns {request_id, status_url}; GET status until
+    status == "completed".
+    """
+    resp = await client.post(f"{BASE_URL}/{model_id}", headers=headers, json=body)
+    _raise_for_body(resp)
+    data = resp.json()
+    request_id = data.get("request_id")
+    status_url = data.get("status_url") or f"{BASE_URL}/requests/{request_id}/status"
+
+    for _ in range(120):  # ~6 min cap
+        await asyncio.sleep(3)
+        poll = await client.get(status_url, headers=headers)
+        _raise_for_body(poll)
+        body_json = poll.json()
+        status = body_json.get("status")
+        if status == "completed":
+            return body_json, request_id
+        if status in {"failed", "nsfw"}:
+            raise RuntimeError(f"{model_id} request {request_id} status={status}: {body_json}")
+    raise TimeoutError(f"{model_id} request {request_id} did not complete in time")
 
 
 async def _real_swap(
@@ -120,53 +146,51 @@ async def _real_swap(
 ) -> dict:
     import httpx
 
-    if not config.HIGGSFIELD_MODEL_ID:
-        raise RuntimeError("HIGGSFIELD_MODEL_ID is not set (e.g. higgsfield-ai/<model>).")
-
-    headers = {"Authorization": _auth_header(), "Content-Type": "application/json"}
-
-    # Text-to-video talking-presenter prompt: a new avatar delivers the same
-    # script. `prompt` is the universal field; aspect_ratio/resolution follow the
-    # documented example. Tune per the chosen model's parameter page if needed.
-    script = (transcript.get("text", "") or "").strip()
-    body: dict = {
-        "prompt": (
-            f"Vertical UGC-style video ad. A {avatar_label} talks directly to the "
-            f"camera, casual handheld selfie style, natural lighting, delivering "
-            f"this script as spoken dialogue: \"{script[:500]}\". "
-            f"Upbeat, authentic, same product focus."
-        ),
-        "aspect_ratio": "9:16",
-        "resolution": "720p",
+    headers = {
+        "Authorization": _auth_header(),
+        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
-
-    submit_url = f"{BASE_URL}/{config.HIGGSFIELD_MODEL_ID}"
+    script = (transcript.get("text", "") or "").strip()
 
     async with httpx.AsyncClient(timeout=60) as client:
-        # 1. Submit the generation request.
-        resp = await client.post(submit_url, headers=headers, json=body)
-        _raise_for_body(resp)
-        data = resp.json()
-        request_id = data.get("request_id")
-        status_url = data.get("status_url") or f"{BASE_URL}/requests/{request_id}/status"
+        # Step 1: generate a new presenter image (text-to-image).
+        image_body = {
+            "prompt": (
+                f"Photorealistic vertical portrait of a {avatar_label}, a UGC content "
+                f"creator filming a selfie-style product review, looking directly at "
+                f"the camera, natural lighting, holding a product, candid and authentic"
+            ),
+            "aspect_ratio": "9:16",
+            "resolution": "1080p",
+        }
+        img_json, _ = await _submit_and_poll(
+            client, config.HIGGSFIELD_IMAGE_MODEL_ID, image_body, headers
+        )
+        images = img_json.get("images") or []
+        image_url = images[0].get("url") if images else (img_json.get("image") or {}).get("url")
+        if not image_url:
+            raise RuntimeError(f"No image URL returned by image model: {img_json}")
 
-        # 2. Poll until completed (cap ~5 min).
-        video_url = None
-        for _ in range(100):
-            await asyncio.sleep(3)
-            poll = await client.get(status_url, headers=headers)
-            _raise_for_body(poll)
-            sb = poll.json()
-            status = sb.get("status")
-            if status == "completed":
-                video_url = (sb.get("video") or {}).get("url")
-                break
-            if status in {"failed", "nsfw"}:
-                raise RuntimeError(f"Higgsfield request {request_id} status={status}: {sb}")
+        # Step 2: animate that image into a talking-style UGC clip (image-to-video).
+        hook = script.split(".")[0][:120] if script else "the product"
+        video_body = {
+            "image_url": image_url,
+            "prompt": (
+                f"The {avatar_label} talks to the camera in a casual handheld UGC "
+                f"selfie video, natural head and hand movement, upbeat energy, "
+                f"enthusiastically reviewing the product — \"{hook}\""
+            ),
+            "duration": 5,
+        }
+        vid_json, request_id = await _submit_and_poll(
+            client, config.HIGGSFIELD_MODEL_ID, video_body, headers
+        )
+        video_url = (vid_json.get("video") or {}).get("url")
         if not video_url:
-            raise TimeoutError(f"Higgsfield request {request_id} did not complete in time")
+            raise RuntimeError(f"No video URL returned by video model: {vid_json}")
 
-        # 3. Download the result.
+        # Step 3: download the result.
         out_video = output_dir / f"variation_{variation_index + 1}.mp4"
         dl = await client.get(video_url)
         _raise_for_body(dl)
