@@ -30,11 +30,6 @@ HIGGSFIELD_BASE_URL = os.getenv("HIGGSFIELD_BASE_URL", "https://platform.higgsfi
 HIGGSFIELD_API_SECRET = os.getenv("HIGGSFIELD_API_SECRET", "").strip()
 HIGGSFIELD_MODEL_ID = os.getenv("HIGGSFIELD_MODEL_ID", "").strip().strip("/")
 
-# Public base URL of THIS app, so Higgsfield can fetch the uploaded source
-# video (e.g. https://adswap.onrender.com). Required for real generation that
-# takes an input video by URL.
-PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
-
 # ── Storage layout (S3-ready folder structure) ───────────────────────────────
 # Override STORAGE_ROOT to point at a mounted bucket / different volume.
 STORAGE_ROOT = Path(os.getenv("STORAGE_ROOT", PROJECT_ROOT)).resolve()

@@ -105,17 +105,6 @@ def _auth_header() -> str:
     return f"Key {key}:{config.HIGGSFIELD_API_SECRET}"
 
 
-def _public_input_url(video_path: Path) -> str | None:
-    """Public URL Higgsfield can fetch the source video from."""
-    if not config.PUBLIC_BASE_URL:
-        return None
-    try:
-        rel = Path(video_path).resolve().relative_to(config.UPLOAD_DIR.resolve())
-    except ValueError:
-        return None
-    return f"{config.PUBLIC_BASE_URL}/files/uploads/{rel.as_posix()}"
-
-
 def _raise_for_body(resp) -> None:
     """Like raise_for_status, but include the response body for diagnosis."""
     if resp.status_code >= 400:
@@ -135,20 +124,21 @@ async def _real_swap(
         raise RuntimeError("HIGGSFIELD_MODEL_ID is not set (e.g. higgsfield-ai/<model>).")
 
     headers = {"Authorization": _auth_header(), "Content-Type": "application/json"}
-    input_url = _public_input_url(video_path)
 
-    # Request body. Field names depend on the chosen model; `prompt` is universal,
-    # the input-video URL is included when available. Tune per the model's docs.
+    # Text-to-video talking-presenter prompt: a new avatar delivers the same
+    # script. `prompt` is the universal field; aspect_ratio/resolution follow the
+    # documented example. Tune per the chosen model's parameter page if needed.
+    script = (transcript.get("text", "") or "").strip()
     body: dict = {
         "prompt": (
-            f"{avatar_label} delivering this UGC ad script to camera, same product "
-            f"and pacing: {transcript.get('text', '')[:600]}"
+            f"Vertical UGC-style video ad. A {avatar_label} talks directly to the "
+            f"camera, casual handheld selfie style, natural lighting, delivering "
+            f"this script as spoken dialogue: \"{script[:500]}\". "
+            f"Upbeat, authentic, same product focus."
         ),
         "aspect_ratio": "9:16",
         "resolution": "720p",
     }
-    if input_url:
-        body["input_video"] = input_url
 
     submit_url = f"{BASE_URL}/{config.HIGGSFIELD_MODEL_ID}"
 
