@@ -93,6 +93,35 @@ async def higgsfield_swap_character(
         return result
 
 
+def _auth_header() -> str:
+    """Higgsfield expects `Authorization: Key {api_key}:{api_key_secret}`.
+
+    Accept either a key already containing the `key:secret` pair, or a separate
+    HIGGSFIELD_API_SECRET.
+    """
+    key = config.HIGGSFIELD_API_KEY
+    if ":" in key:
+        return f"Key {key}"
+    return f"Key {key}:{config.HIGGSFIELD_API_SECRET}"
+
+
+def _public_input_url(video_path: Path) -> str | None:
+    """Public URL Higgsfield can fetch the source video from."""
+    if not config.PUBLIC_BASE_URL:
+        return None
+    try:
+        rel = Path(video_path).resolve().relative_to(config.UPLOAD_DIR.resolve())
+    except ValueError:
+        return None
+    return f"{config.PUBLIC_BASE_URL}/files/uploads/{rel.as_posix()}"
+
+
+def _raise_for_body(resp) -> None:
+    """Like raise_for_status, but include the response body for diagnosis."""
+    if resp.status_code >= 400:
+        raise RuntimeError(f"HTTP {resp.status_code} from {resp.request.url}: {resp.text[:500]}")
+
+
 async def _real_swap(
     video_path: Path,
     transcript: dict,
@@ -102,54 +131,55 @@ async def _real_swap(
 ) -> dict:
     import httpx
 
-    headers = {"Authorization": f"Bearer {config.HIGGSFIELD_API_KEY}"}
+    if not config.HIGGSFIELD_MODEL_ID:
+        raise RuntimeError("HIGGSFIELD_MODEL_ID is not set (e.g. higgsfield-ai/<model>).")
 
-    async with httpx.AsyncClient(timeout=120) as client:
-        # 1. Upload the source media.
-        with video_path.open("rb") as fh:
-            up = await client.post(
-                f"{BASE_URL}/media",
-                headers=headers,
-                files={"file": (video_path.name, fh, "video/mp4")},
-            )
-        up.raise_for_status()
-        media_id = up.json().get("id")
+    headers = {"Authorization": _auth_header(), "Content-Type": "application/json"}
+    input_url = _public_input_url(video_path)
 
-        # 2. Start the character-swap job.
-        start = await client.post(
-            f"{BASE_URL}/jobs",
-            headers={**headers, "Content-Type": "application/json"},
-            json={
-                "type": "character_swap",
-                "media_id": media_id,
-                "avatar_prompt": avatar_label,
-                "transcript": transcript.get("text", ""),
-                "lip_sync": True,
-            },
-        )
-        start.raise_for_status()
-        job_id = start.json().get("id")
+    # Request body. Field names depend on the chosen model; `prompt` is universal,
+    # the input-video URL is included when available. Tune per the model's docs.
+    body: dict = {
+        "prompt": (
+            f"{avatar_label} delivering this UGC ad script to camera, same product "
+            f"and pacing: {transcript.get('text', '')[:600]}"
+        ),
+        "aspect_ratio": "9:16",
+        "resolution": "720p",
+    }
+    if input_url:
+        body["input_video"] = input_url
 
-        # 3. Poll until done (cap ~5 min).
+    submit_url = f"{BASE_URL}/{config.HIGGSFIELD_MODEL_ID}"
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        # 1. Submit the generation request.
+        resp = await client.post(submit_url, headers=headers, json=body)
+        _raise_for_body(resp)
+        data = resp.json()
+        request_id = data.get("request_id")
+        status_url = data.get("status_url") or f"{BASE_URL}/requests/{request_id}/status"
+
+        # 2. Poll until completed (cap ~5 min).
         video_url = None
         for _ in range(100):
             await asyncio.sleep(3)
-            poll = await client.get(f"{BASE_URL}/jobs/{job_id}", headers=headers)
-            poll.raise_for_status()
-            body = poll.json()
-            status = body.get("status")
-            if status in {"completed", "complete", "succeeded"}:
-                video_url = body.get("output_url") or body.get("result", {}).get("url")
+            poll = await client.get(status_url, headers=headers)
+            _raise_for_body(poll)
+            sb = poll.json()
+            status = sb.get("status")
+            if status == "completed":
+                video_url = (sb.get("video") or {}).get("url")
                 break
-            if status in {"failed", "error"}:
-                raise RuntimeError(f"Higgsfield job {job_id} failed: {body}")
+            if status in {"failed", "nsfw"}:
+                raise RuntimeError(f"Higgsfield request {request_id} status={status}: {sb}")
         if not video_url:
-            raise TimeoutError(f"Higgsfield job {job_id} did not complete in time")
+            raise TimeoutError(f"Higgsfield request {request_id} did not complete in time")
 
-        # 4. Download the result.
+        # 3. Download the result.
         out_video = output_dir / f"variation_{variation_index + 1}.mp4"
-        dl = await client.get(video_url, headers=headers)
-        dl.raise_for_status()
+        dl = await client.get(video_url)
+        _raise_for_body(dl)
         out_video.write_bytes(dl.content)
 
     out_thumb = output_dir / f"variation_{variation_index + 1}.svg"
@@ -158,6 +188,6 @@ async def _real_swap(
         "status": "complete",
         "video_filename": out_video.name,
         "thumbnail_filename": out_thumb.name,
-        "external_job_id": job_id,
+        "external_job_id": request_id,
         "mock": False,
     }
