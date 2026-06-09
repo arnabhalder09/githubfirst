@@ -237,12 +237,14 @@ async def debug_probe() -> dict:
     from higgsfield_service import _auth_header
 
     candidates = [
+        # control: a known-good model — should NOT be 404 if the probe works.
+        "higgsfield-ai/soul/standard",
         "canvas", "higgsfield-ai/canvas", "higgsfield-ai/canvas/standard",
-        "banana_placement", "banana-placement",
-        "higgsfield-ai/banana-placement", "higgsfield-ai/banana-placement/standard",
-        "higgsfield-ai/nano-banana-pro", "nano-banana-pro",
-        "higgsfield-ai/nano-banana-pro/standard", "nano_banana_pro_inpaint",
-        "kontext", "higgsfield-ai/kontext",
+        "banana_placement", "higgsfield-ai/banana_placement",
+        "higgsfield-ai/banana-placement/standard",
+        "higgsfield-ai/product-placement/standard", "product-placement",
+        "nano-banana-pro", "higgsfield-ai/nano-banana-pro/standard",
+        "kontext", "higgsfield-ai/kontext/standard",
     ]
     headers = {
         "Authorization": _auth_header(),
@@ -250,7 +252,16 @@ async def debug_probe() -> dict:
         "Accept": "application/json",
     }
     results = []
+    list_endpoints = {}
     async with httpx.AsyncClient(timeout=20) as client:
+        # Ask the API to enumerate its models, if such an endpoint exists.
+        for path in ("/models", "/v1/models", "/edit/models"):
+            try:
+                lr = await client.get(f"{config.HIGGSFIELD_BASE_URL}{path}", headers=headers)
+                list_endpoints[path] = {"status": lr.status_code, "body": lr.text[:1500]}
+            except Exception as exc:  # noqa: BLE001
+                list_endpoints[path] = {"error": str(exc)[:120]}
+
         for mid in candidates:
             try:
                 r = await client.post(
@@ -271,7 +282,7 @@ async def debug_probe() -> dict:
                 results.append(entry)
             except Exception as exc:  # noqa: BLE001
                 results.append({"model_id": mid, "error": str(exc)[:120]})
-    return {"candidates": results}
+    return {"list_endpoints": list_endpoints, "candidates": results}
 
 
 @app.get("/jobs/{job_id}/download")
