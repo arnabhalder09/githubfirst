@@ -46,7 +46,30 @@ adswap/
 └── .env.example
 ```
 
-## Run with Docker (recommended)
+## Deploy to the web (Render, no laptop needed)
+
+The repo ships a `render.yaml` blueprint that deploys AdSwap as a **single
+Docker web service** (FastAPI serves the API *and* the built React frontend on
+one URL). From a phone:
+
+1. Go to **https://render.com** and sign in with GitHub.
+2. **New → Blueprint**, pick this repo, **Apply**.
+3. Render builds the image and gives you a public `https://…onrender.com` URL.
+
+API keys are optional — leave them blank for mock mode, or paste them into the
+Render dashboard to enable real generation. (Free plan has an ephemeral
+filesystem, so generated media resets on redeploy; see the note in
+`render.yaml` for adding a persistent disk.)
+
+The same single-container image runs anywhere:
+
+```bash
+cd adswap
+docker build -t adswap .
+docker run -p 8000:8000 adswap   # open http://localhost:8000
+```
+
+## Run with Docker Compose
 
 Two containers — a FastAPI backend and an nginx-served frontend that reverse-
 proxies the API. `ffmpeg` is baked into the backend image, and uploads/outputs/

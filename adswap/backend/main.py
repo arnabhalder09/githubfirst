@@ -12,12 +12,13 @@ Endpoints
 """
 from __future__ import annotations
 
+import os
 import uuid
 from pathlib import Path
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -174,3 +175,23 @@ def download_all(job_id: str, db: Session = Depends(get_session)) -> StreamingRe
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="adswap_{job_id}.zip"'},
     )
+
+
+# ── Optionally serve the built React frontend from the same origin ────────────
+# When FRONTEND_DIST points at a Vite build (set in the single-container /
+# Render deployment), serve its assets and fall back to index.html for client-
+# side routes. Skipped entirely in local dev, where Vite serves the frontend.
+_FRONTEND_DIST = Path(os.getenv("FRONTEND_DIST", "")).expanduser()
+if _FRONTEND_DIST.is_dir():
+    _assets = _FRONTEND_DIST / "assets"
+    if _assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(_assets)), name="assets")
+
+    @app.get("/{full_path:path}")
+    def spa_fallback(full_path: str) -> FileResponse:
+        # API routes and the /files, /assets mounts are registered earlier, so
+        # they match first; this only catches unmatched (SPA) paths.
+        candidate = _FRONTEND_DIST / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(_FRONTEND_DIST / "index.html")

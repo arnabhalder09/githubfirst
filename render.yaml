@@ -1,0 +1,36 @@
+# Render blueprint — deploys AdSwap as a single Docker web service.
+#
+# From your phone:
+#   1. Push this repo to GitHub (already done).
+#   2. Go to https://render.com → sign in with GitHub.
+#   3. New → Blueprint → pick this repo → Apply.
+# Render reads this file, builds the Docker image, and gives you a public
+# https URL. API keys are optional — leave them blank for mock mode, or paste
+# them in the dashboard to enable real generation.
+
+services:
+  - type: web
+    name: adswap
+    runtime: docker
+    plan: free
+    dockerfilePath: ./adswap/Dockerfile
+    dockerContext: ./adswap
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false        # set in the Render dashboard (optional)
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: HIGGSFIELD_API_KEY
+        sync: false
+      - key: CLAUDE_MODEL
+        value: claude-sonnet-4-20250514
+
+# NOTE: the free plan has an ephemeral filesystem, so generated videos and the
+# SQLite DB reset on each redeploy/restart — fine for a demo. For durable
+# storage, upgrade the plan and add a persistent disk mounted at /data:
+#
+#     disk:
+#       name: adswap-data
+#       mountPath: /data
+#       sizeGB: 1
