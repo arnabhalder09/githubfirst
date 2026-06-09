@@ -20,24 +20,30 @@ import config
 SYSTEM_PROMPT = (
     "You are a UGC ad-analysis engine. Given sampled frames from a short user-"
     "generated-content video ad and its transcript with timestamps, analyze the "
-    "ad's structure. Identify which time segments show a person (UGC character) "
-    "talking to camera versus product B-roll, the overall tone, the hook(s), and "
-    "the call-to-action timestamps. Also identify THE PRODUCT being advertised and "
-    "describe it precisely enough that an image model could recreate it faithfully: "
-    "its name/category, exact color(s), shape, relative size, material/finish, and "
-    "any visible text, logo, or labeling. Respond ONLY with JSON matching the "
-    "requested schema."
+    "ad's structure in detail. Break the ad into time segments; for EACH segment "
+    "give a short label for its role (e.g. Hook, Problem, Demo, Feature, "
+    "Testimonial, B-roll, Call to action), classify it as ugc_talking or "
+    "product_broll, and write a vivid one-sentence description of what is happening "
+    "on screen and what is said. Also give a 1-2 sentence overall summary of the "
+    "ad's narrative flow, the overall tone, the hook(s), and the call-to-action "
+    "timestamps. Finally identify THE PRODUCT being advertised and describe it "
+    "precisely enough that an image model could recreate it faithfully: its "
+    "name/category, exact color(s), shape, relative size, material/finish, and any "
+    "visible text, logo, or labeling. Respond ONLY with JSON matching the requested "
+    "schema."
 )
 
 # JSON schema we ask Claude to fill in (described in the prompt for older models
 # that predate structured outputs).
 SCHEMA_HINT = {
+    "summary": "1-2 sentence overview of the ad's narrative flow",
     "segments": [
         {
             "start": "float seconds",
             "end": "float seconds",
             "type": "one of: ugc_talking | product_broll",
-            "description": "short description",
+            "label": "role, e.g. Hook | Problem | Demo | Feature | Testimonial | B-roll | Call to action",
+            "description": "vivid one-sentence description of what happens on screen and what is said",
         }
     ],
     "tone": "string",
@@ -54,18 +60,27 @@ SCHEMA_HINT = {
 def _mock_analysis(transcript: dict) -> dict:
     segments = transcript.get("segments") or []
     out_segments = []
+    n = len(segments)
     for i, seg in enumerate(segments):
+        if i == 0:
+            label = "Hook"
+        elif i == n - 1:
+            label = "Call to action"
+        else:
+            label = "Demo" if i % 2 else "Feature"
         out_segments.append(
             {
                 "start": seg.get("start", 0.0),
                 "end": seg.get("end", 0.0),
                 # Treat the final segment (the CTA) as the only B-roll moment.
-                "type": "product_broll" if i == len(segments) - 1 else "ugc_talking",
-                "description": seg.get("text", "")[:80],
+                "type": "product_broll" if i == n - 1 else "ugc_talking",
+                "label": label,
+                "description": seg.get("text", "")[:120],
             }
         )
     cta = [segments[-1]["start"]] if segments else []
     return {
+        "summary": "Creator hooks the viewer, walks through the product, and ends on a call to action.",
         "segments": out_segments,
         "tone": "casual, enthusiastic, authentic",
         "hooks": [{"timestamp": 0.0, "text": segments[0]["text"]}] if segments else [],

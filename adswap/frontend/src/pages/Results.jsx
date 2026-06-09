@@ -101,52 +101,64 @@ export default function Results() {
           )}
           {job.scene_analysis && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5">
-              <h3 className="text-sm font-medium text-neutral-300">🧠 Scene analysis</h3>
-              {job.scene_analysis.tone && (
-                <p className="mt-2 text-sm">
-                  <span className="text-neutral-500">Tone:</span>{" "}
-                  <span className="text-neutral-300">{job.scene_analysis.tone}</span>
+              <h3 className="text-sm font-medium text-neutral-300">🧠 Scene structure</h3>
+              {job.scene_analysis.summary && (
+                <p className="mt-2 text-sm text-neutral-400 leading-relaxed">
+                  {job.scene_analysis.summary}
                 </p>
               )}
-              {job.scene_analysis.hooks?.length > 0 && (
-                <div className="mt-2 text-sm">
-                  <span className="text-neutral-500">Hooks:</span>
-                  <ul className="mt-1 space-y-1">
-                    {job.scene_analysis.hooks.map((h, i) => (
-                      <li key={i} className="text-neutral-300">
-                        <span className="text-brand tabular-nums">
-                          {Number(h.timestamp ?? 0).toFixed(1)}s
-                        </span>{" "}
-                        — {h.text}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {job.scene_analysis.cta_timestamps?.length > 0 && (
-                <p className="mt-2 text-sm">
-                  <span className="text-neutral-500">CTA at:</span>{" "}
-                  <span className="text-neutral-300">
-                    {job.scene_analysis.cta_timestamps
-                      .map((t) => `${Number(t).toFixed(1)}s`)
-                      .join(", ")}
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+                {job.scene_analysis.tone && (
+                  <span>
+                    Tone: <span className="text-neutral-300">{job.scene_analysis.tone}</span>
                   </span>
-                </p>
-              )}
+                )}
+                {job.scene_analysis.cta_timestamps?.length > 0 && (
+                  <span>
+                    CTA:{" "}
+                    <span className="text-neutral-300">
+                      {job.scene_analysis.cta_timestamps
+                        .map((t) => `${Number(t).toFixed(1)}s`)
+                        .join(", ")}
+                    </span>
+                  </span>
+                )}
+              </div>
+
               {job.scene_analysis.segments?.length > 0 && (
-                <p className="mt-2 text-xs text-neutral-500">
-                  {job.scene_analysis.segments.length} segments ·{" "}
-                  {
-                    job.scene_analysis.segments.filter((s) => s.type === "ugc_talking")
-                      .length
-                  }{" "}
-                  talking ·{" "}
-                  {
-                    job.scene_analysis.segments.filter((s) => s.type === "product_broll")
-                      .length
-                  }{" "}
-                  B-roll
-                </p>
+                <ol className="mt-4 space-y-3">
+                  {job.scene_analysis.segments.map((s, i) => {
+                    const isBroll = s.type === "product_broll";
+                    return (
+                      <li key={i} className="flex gap-3">
+                        <span className="shrink-0 mt-0.5 text-[11px] tabular-nums text-neutral-500 w-20">
+                          {Number(s.start ?? 0).toFixed(1)}–{Number(s.end ?? 0).toFixed(1)}s
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {s.label && (
+                              <span className="text-xs font-medium text-neutral-200">
+                                {s.label}
+                              </span>
+                            )}
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                                isBroll
+                                  ? "bg-amber-500/15 text-amber-300"
+                                  : "bg-brand/15 text-brand"
+                              }`}
+                            >
+                              {isBroll ? "B-roll" : "talking"}
+                            </span>
+                          </div>
+                          {s.description && (
+                            <p className="text-sm text-neutral-400 mt-0.5">{s.description}</p>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
               )}
             </div>
           )}
