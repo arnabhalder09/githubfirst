@@ -291,6 +291,46 @@ async def debug_probe() -> dict:
     return {"list_endpoints": list_endpoints, "candidates": results}
 
 
+@app.get("/debug/image-input")
+async def debug_image_input() -> dict:
+    """Test whether the text-to-image model accepts a product image as input.
+
+    Posts prompt + a candidate image field to soul. 422 'extra/unexpected' = not
+    supported; a queued 2xx (auto-cancelled) = the field is accepted.
+    """
+    import httpx
+
+    from higgsfield_service import _auth_header
+
+    headers = {
+        "Authorization": _auth_header(),
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    model = config.HIGGSFIELD_IMAGE_MODEL_ID
+    fields = ["image_url", "image", "reference_image", "init_image", "image_urls", "reference_images"]
+    test_url = "https://picsum.photos/512"
+    results = []
+    async with httpx.AsyncClient(timeout=25) as client:
+        for f in fields:
+            value = [test_url] if f.endswith("s") else test_url
+            body = {"prompt": "a presenter holding the product", f: value}
+            try:
+                r = await client.post(f"{config.HIGGSFIELD_BASE_URL}/{model}", headers=headers, json=body)
+                entry = {"field": f, "status": r.status_code, "body": r.text[:200]}
+                if r.status_code < 300:
+                    rid = r.json().get("request_id")
+                    if rid:
+                        await client.post(
+                            f"{config.HIGGSFIELD_BASE_URL}/requests/{rid}/cancel", headers=headers
+                        )
+                        entry["cancelled"] = True
+                results.append(entry)
+            except Exception as exc:  # noqa: BLE001
+                results.append({"field": f, "error": str(exc)[:120]})
+    return {"model": model, "results": results}
+
+
 @app.get("/jobs/{job_id}/download")
 def download_all(job_id: str, db: Session = Depends(get_session)) -> StreamingResponse:
     job = _get_job_or_404(db, job_id)
