@@ -90,6 +90,7 @@ async def higgsfield_swap_character(
     output_dir: Path,
     on_stage=None,
     scene_analysis: dict | None = None,
+    product_image_url: str | None = None,
 ) -> dict:
     video_path = Path(video_path)
     output_dir = Path(output_dir)
@@ -102,7 +103,7 @@ async def higgsfield_swap_character(
     try:
         return await _real_swap(
             video_path, transcript, avatar_label, variation_index, output_dir,
-            on_stage, scene_analysis,
+            on_stage, scene_analysis, product_image_url,
         )
     except Exception as exc:  # noqa: BLE001 — fall back so one bad call doesn't kill the job
         result = await _mock_swap(video_path, output_dir, avatar_label, variation_index, on_stage)
@@ -162,6 +163,7 @@ async def _real_swap(
     output_dir: Path,
     on_stage=None,
     scene_analysis: dict | None = None,
+    product_image_url: str | None = None,
 ) -> dict:
     import httpx
 
@@ -172,29 +174,42 @@ async def _real_swap(
     }
     script = (transcript.get("text", "") or "").strip()
 
-    # Describe the real product so the generated one matches as closely as the
-    # text-to-image model allows (true pixel match needs image-reference models).
     product = (scene_analysis or {}).get("product") or {}
     prod_name = product.get("name") or "the featured product"
     prod_desc = product.get("description") or ""
 
+    # Use the real product image as a reference when an edit model + frame URL are
+    # available (keep product, swap person). Otherwise fall back to describing it.
+    use_reference = bool(config.HIGGSFIELD_PRODUCT_MODEL_ID and product_image_url)
+
     async with httpx.AsyncClient(timeout=60) as client:
-        # Step 1: generate a new presenter image (text-to-image).
         _emit(on_stage, "generating_image")
-        image_body = {
-            "prompt": (
-                f"Photorealistic vertical portrait of a {avatar_label}, a UGC content "
-                f"creator filming a selfie-style product review, looking directly at "
-                f"the camera, natural lighting, candid and authentic, clearly holding "
-                f"{prod_name}. The product must look exactly like this: {prod_desc}. "
-                f"Reproduce its exact color, shape, size, and any labeling."
-            ),
-            "aspect_ratio": "9:16",
-            "resolution": "720p",
-        }
-        img_json, _ = await _submit_and_poll(
-            client, config.HIGGSFIELD_IMAGE_MODEL_ID, image_body, headers
-        )
+        if use_reference:
+            image_model = config.HIGGSFIELD_PRODUCT_MODEL_ID
+            image_body = {
+                "image_url": product_image_url,
+                "prompt": (
+                    f"Replace the person in this image with a different {avatar_label} "
+                    f"(a new individual), but keep the product they are holding "
+                    f"completely unchanged — the SAME {prod_name}, identical color, "
+                    f"shape, size, and labeling ({prod_desc}). Casual vertical UGC "
+                    f"selfie style, natural lighting, authentic."
+                ),
+            }
+        else:
+            image_model = config.HIGGSFIELD_IMAGE_MODEL_ID
+            image_body = {
+                "prompt": (
+                    f"Photorealistic vertical portrait of a {avatar_label}, a UGC "
+                    f"content creator filming a selfie-style product review, looking "
+                    f"directly at the camera, natural lighting, candid, clearly holding "
+                    f"{prod_name}. The product must look exactly like this: {prod_desc}. "
+                    f"Reproduce its exact color, shape, size, and any labeling."
+                ),
+                "aspect_ratio": "9:16",
+                "resolution": "720p",
+            }
+        img_json, _ = await _submit_and_poll(client, image_model, image_body, headers)
         images = img_json.get("images") or []
         image_url = images[0].get("url") if images else (img_json.get("image") or {}).get("url")
         if not image_url:

@@ -94,6 +94,14 @@ async def process_job(job_id: str) -> None:
         # Step 3: analyze scenes with Claude (frames optional).
         frames = extract_frames(video_path, out_dir / "_frames")
         scene_analysis = await claude_analyze_scenes(transcript, frames)
+
+        # Public URL of a frame showing the real product, for product-preserving
+        # generation. Frames live under OUTPUT_DIR and are served at /files/outputs.
+        product_image_url = None
+        if frames and config.PUBLIC_BASE_URL:
+            ref_frame = frames[len(frames) // 2]  # mid clip — product usually on screen
+            rel = relative_output(ref_frame).replace("\\", "/")
+            product_image_url = f"{config.PUBLIC_BASE_URL}/files/outputs/{rel}"
         job.scene_analysis = json.dumps(scene_analysis)
         _update(db, job, progress=P_AUDIO + P_TRANSCRIBE + P_ANALYZE, stage="generating")
 
@@ -129,6 +137,7 @@ async def process_job(job_id: str) -> None:
                 output_dir=out_dir,
                 on_stage=_on_stage,
                 scene_analysis=scene_analysis,
+                product_image_url=product_image_url,
             )
             v.stage = "done"
             v.status = result.get("status", "complete")

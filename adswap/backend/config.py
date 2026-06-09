@@ -35,6 +35,13 @@ HIGGSFIELD_IMAGE_MODEL_ID = os.getenv(
 HIGGSFIELD_MODEL_ID = os.getenv(
     "HIGGSFIELD_MODEL_ID", "higgsfield-ai/dop/standard"
 ).strip().strip("/")
+# Image-edit / reference model that PRESERVES the real product (keep product,
+# swap the person). When set together with PUBLIC_BASE_URL, the pipeline feeds a
+# frame of the real product as the reference image. Empty → description-only mode.
+HIGGSFIELD_PRODUCT_MODEL_ID = os.getenv("HIGGSFIELD_PRODUCT_MODEL_ID", "").strip().strip("/")
+
+# Public URL of THIS app so Higgsfield can fetch the extracted product frame.
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
 
 # ── Storage layout (S3-ready folder structure) ───────────────────────────────
 # Override STORAGE_ROOT to point at a mounted bucket / different volume.

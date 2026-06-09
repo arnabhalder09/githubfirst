@@ -29,6 +29,10 @@ services:
         value: higgsfield-ai/dop/standard          # image-to-video model
       - key: HIGGSFIELD_IMAGE_MODEL_ID
         value: higgsfield-ai/soul/standard         # text-to-image (new presenter)
+      - key: PUBLIC_BASE_URL
+        value: https://adswap.onrender.com         # so Higgsfield can fetch product frames
+      - key: HIGGSFIELD_PRODUCT_MODEL_ID
+        sync: false   # image-edit model that preserves the real product (set when known)
       - key: CLAUDE_MODEL
         value: claude-sonnet-4-20250514
 
