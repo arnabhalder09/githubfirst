@@ -7,7 +7,9 @@ const ACCEPT = ".mp4,.mov,.avi";
 export default function Upload() {
   const navigate = useNavigate();
   const inputRef = useRef(null);
+  const productInputRef = useRef(null);
   const [file, setFile] = useState(null);
+  const [productImage, setProductImage] = useState(null);
   const [numVariations, setNumVariations] = useState(3);
   const [avatarStyle, setAvatarStyle] = useState("diverse_cast");
   const [dragging, setDragging] = useState(false);
@@ -37,6 +39,7 @@ export default function Upload() {
         file,
         numVariations,
         avatarStyle,
+        productImage,
         onProgress: setUploadPct,
       });
       navigate(`/results/${job_id}`);
@@ -96,7 +99,53 @@ export default function Upload() {
         )}
       </div>
 
-      <div className="mt-8 grid sm:grid-cols-2 gap-6">
+      <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => productInputRef.current?.click()}
+            className="shrink-0 h-16 w-16 rounded-lg border border-dashed border-neutral-700 hover:border-neutral-500 grid place-items-center overflow-hidden"
+          >
+            {productImage ? (
+              <img
+                src={URL.createObjectURL(productImage)}
+                alt="product"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className="text-2xl">📦</span>
+            )}
+          </button>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-neutral-200">
+              Product image <span className="text-neutral-500">(optional)</span>
+            </p>
+            <p className="text-xs text-neutral-500 mt-0.5">
+              {productImage
+                ? productImage.name
+                : "Add a clean photo of your product for an exact match in every variation."}
+            </p>
+          </div>
+          {productImage && (
+            <button
+              type="button"
+              onClick={() => setProductImage(null)}
+              className="ml-auto text-xs text-neutral-400 hover:text-white"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+        <input
+          ref={productInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => setProductImage(e.target.files?.[0] ?? null)}
+        />
+      </div>
+
+      <div className="mt-6 grid sm:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-neutral-300 mb-2">
             Number of variations

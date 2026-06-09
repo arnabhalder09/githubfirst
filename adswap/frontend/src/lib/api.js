@@ -18,12 +18,13 @@ export const api = {
   health: () => fetch(`${BASE}/health`).then(json),
 
   // Uses XHR (not fetch) so we can report upload progress via onProgress(pct).
-  createJob: ({ file, numVariations, avatarStyle, onProgress }) =>
+  createJob: ({ file, numVariations, avatarStyle, productImage, onProgress }) =>
     new Promise((resolve, reject) => {
       const form = new FormData();
       form.append("file", file);
       form.append("num_variations", numVariations);
       form.append("avatar_style", avatarStyle);
+      if (productImage) form.append("product_image", productImage);
 
       const xhr = new XMLHttpRequest();
       xhr.open("POST", `${BASE}/jobs`);

@@ -55,6 +55,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".avi"}
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_VARIATIONS = {3, 5, 10}
 ALLOWED_AVATAR_STYLES = {"realistic_female", "realistic_male", "diverse_cast"}
 

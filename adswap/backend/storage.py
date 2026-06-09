@@ -34,6 +34,11 @@ def relative_output(path: Path) -> str:
     return str(Path(path).resolve().relative_to(OUTPUT_DIR.resolve()))
 
 
+def relative_upload(path: Path) -> str:
+    """Return the path relative to UPLOAD_DIR (used to build public URLs)."""
+    return str(Path(path).resolve().relative_to(UPLOAD_DIR.resolve()))
+
+
 def save_upload(job_id: str, filename: str, fileobj) -> Path:
     dest = upload_path(job_id, filename)
     with dest.open("wb") as out:

@@ -67,12 +67,27 @@ def health() -> dict:
     }
 
 
+def _save_product_image(job_id: str, product_image: UploadFile | None) -> str | None:
+    """Validate + save an optional product image, returning its path on disk."""
+    if product_image is None or not product_image.filename:
+        return None
+    ext = Path(product_image.filename).suffix.lower()
+    if ext not in config.ALLOWED_IMAGE_EXTENSIONS:
+        raise HTTPException(
+            400,
+            f"Unsupported product image type {ext!r}; allowed: {sorted(config.ALLOWED_IMAGE_EXTENSIONS)}",
+        )
+    dest = storage.save_upload(job_id, f"product_{product_image.filename}", product_image.file)
+    return str(dest)
+
+
 @app.post("/jobs", status_code=201)
 async def create_job(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     num_variations: int = Form(3),
     avatar_style: str = Form("diverse_cast"),
+    product_image: UploadFile | None = File(None),
     db: Session = Depends(get_session),
 ) -> dict:
     ext = Path(file.filename or "").suffix.lower()
@@ -84,6 +99,7 @@ async def create_job(
 
     job_id = uuid.uuid4().hex
     dest = storage.save_upload(job_id, file.filename, file.file)
+    product_image_path = _save_product_image(job_id, product_image)
 
     job = Job(
         id=job_id,
@@ -91,6 +107,7 @@ async def create_job(
         video_path=str(dest),
         num_variations=num_variations,
         avatar_style=style,
+        product_image_path=product_image_path,
         status=JobStatus.pending,
         stage="queued",
         progress=0.0,
@@ -138,6 +155,7 @@ async def remix_job(
     background_tasks: BackgroundTasks,
     avatar_style: str = Form(...),
     num_variations: int | None = Form(None),
+    product_image: UploadFile | None = File(None),
     db: Session = Depends(get_session),
 ) -> dict:
     src = _get_job_or_404(db, job_id)
@@ -147,13 +165,15 @@ async def remix_job(
         raise HTTPException(400, f"num_variations must be one of {sorted(config.ALLOWED_VARIATIONS)}")
 
     new_id = uuid.uuid4().hex
-    # Reuse the already-uploaded source video.
+    # Reuse the source video; use a new product image if provided, else the source's.
+    new_product = _save_product_image(new_id, product_image) or src.product_image_path
     new_job = Job(
         id=new_id,
         filename=src.filename,
         video_path=src.video_path,
         num_variations=n,
         avatar_style=style,
+        product_image_path=new_product,
         status=JobStatus.pending,
         stage="queued",
         progress=0.0,

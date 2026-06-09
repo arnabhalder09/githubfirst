@@ -44,6 +44,9 @@ class Job(Base):
     stage = Column(String, nullable=False, default="queued")
     error = Column(Text, nullable=True)
 
+    # Optional product photo uploaded for exact product preservation.
+    product_image_path = Column(String, nullable=True)  # path on disk (under UPLOAD_DIR)
+
     # Pipeline artefacts (stored as JSON text).
     transcript = Column(Text, nullable=True)
     scene_analysis = Column(Text, nullable=True)
@@ -58,6 +61,17 @@ class Job(Base):
         order_by="Variation.index",
     )
 
+    def _product_image_url(self) -> str | None:
+        if not self.product_image_path:
+            return None
+        import storage
+
+        try:
+            rel = storage.relative_upload(self.product_image_path).replace("\\", "/")
+        except ValueError:
+            return None
+        return f"/files/uploads/{rel}"
+
     def to_dict(self, include_artifacts: bool = False) -> dict:
         data = {
             "id": self.id,
@@ -70,6 +84,7 @@ class Job(Base):
             "error": self.error,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "product_image_url": self._product_image_url(),
             "variations": [v.to_dict() for v in self.variations],
         }
         if include_artifacts:

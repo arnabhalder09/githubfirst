@@ -10,11 +10,12 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import config
 from claude_service import claude_analyze_scenes
 from database import SessionLocal
 from higgsfield_service import avatar_for_variation, higgsfield_swap_character
 from models import Job, JobStatus, Variation
-from storage import job_output_dir, relative_output
+from storage import job_output_dir, relative_output, relative_upload
 from whisper_service import whisper_transcribe
 
 # Progress weights for each stage (sum to 100). Generation is the bulk.
@@ -95,10 +96,13 @@ async def process_job(job_id: str) -> None:
         frames = extract_frames(video_path, out_dir / "_frames")
         scene_analysis = await claude_analyze_scenes(transcript, frames)
 
-        # Public URL of a frame showing the real product, for product-preserving
-        # generation. Frames live under OUTPUT_DIR and are served at /files/outputs.
+        # Reference image for product-preserving generation. Prefer the product
+        # photo the user uploaded; otherwise fall back to a mid-clip video frame.
         product_image_url = None
-        if frames and config.PUBLIC_BASE_URL:
+        if config.PUBLIC_BASE_URL and job.product_image_path:
+            rel = relative_upload(job.product_image_path).replace("\\", "/")
+            product_image_url = f"{config.PUBLIC_BASE_URL}/files/uploads/{rel}"
+        elif frames and config.PUBLIC_BASE_URL:
             ref_frame = frames[len(frames) // 2]  # mid clip — product usually on screen
             rel = relative_output(ref_frame).replace("\\", "/")
             product_image_url = f"{config.PUBLIC_BASE_URL}/files/outputs/{rel}"
