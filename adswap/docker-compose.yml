@@ -1,0 +1,36 @@
+# AdSwap — full stack in two containers.
+#   docker compose up --build   →   open http://localhost:8080
+#
+# API keys are optional: leave them unset (or absent from .env) and each
+# service runs in deterministic mock mode. Compose auto-loads variables from a
+# `.env` file in this directory for the substitutions below.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      STORAGE_ROOT: /data
+      DATABASE_URL: sqlite:////data/adswap.db
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      HIGGSFIELD_API_KEY: ${HIGGSFIELD_API_KEY:-}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4-20250514}
+    volumes:
+      - adswap-data:/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  adswap-data:

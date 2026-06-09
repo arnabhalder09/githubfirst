@@ -46,7 +46,25 @@ adswap/
 └── .env.example
 ```
 
-## Run it
+## Run with Docker (recommended)
+
+Two containers — a FastAPI backend and an nginx-served frontend that reverse-
+proxies the API. `ffmpeg` is baked into the backend image, and uploads/outputs/
+SQLite persist on a named volume.
+
+```bash
+cd adswap
+cp .env.example .env          # optional — add API keys, or leave blank for mock mode
+docker compose up --build
+```
+
+Then open **http://localhost:8080**. That's the only port exposed; the frontend
+proxies `/jobs`, `/files`, `/health`, and `/docs` to the backend internally, so
+the app works same-origin with no extra config.
+
+Stop with `docker compose down` (add `-v` to also wipe the data volume).
+
+## Run locally (without Docker)
 
 ### 1. Backend
 
