@@ -22,6 +22,19 @@ export async function getJob(jobId: string) {
   return res.json();
 }
 
+export interface HiggsfieldModel {
+  id: string;
+  name?: string;
+  description?: string;
+  [key: string]: unknown;
+}
+
+export async function listModels(): Promise<{ models: HiggsfieldModel[] }> {
+  const res = await fetch(`${BASE_URL}/models`, { headers: headers() });
+  if (!res.ok) throw new Error(`Higgsfield API error: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
 export async function uploadMedia(formData: FormData) {
   const key = process.env.HIGGSFIELD_API_KEY;
   if (!key) throw new Error("HIGGSFIELD_API_KEY is not set");
