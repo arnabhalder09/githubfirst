@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, AVATAR_STYLES } from "../lib/api.js";
 import ProgressBar from "../components/ProgressBar.jsx";
+import ProcessingSteps from "../components/ProcessingSteps.jsx";
 import VideoPlayer from "../components/VideoPlayer.jsx";
 
 export default function Results() {
@@ -78,9 +79,7 @@ export default function Results() {
               {Math.round(job.progress)}%
             </span>
           </div>
-          <p className="mt-2 text-sm text-neutral-400 capitalize">
-            {job.stage.replace(/_/g, " ")}…
-          </p>
+          <ProcessingSteps job={job} />
         </div>
       )}
 

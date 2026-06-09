@@ -10,7 +10,10 @@ export default function VideoPlayer({ variation }) {
         {videoUrl ? (
           <video src={videoUrl} poster={posterUrl} controls className="w-full h-full object-contain" />
         ) : (
-          <span className="text-neutral-600 text-sm">Generating…</span>
+          <div className="flex flex-col items-center gap-3 text-neutral-500">
+            <span className="h-6 w-6 rounded-full border-2 border-neutral-600 border-t-brand animate-spin" />
+            <span className="text-sm animate-pulse">Generating…</span>
+          </div>
         )}
       </div>
       <div className="flex items-center justify-between gap-2 p-3">
