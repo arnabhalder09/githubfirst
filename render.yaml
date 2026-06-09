@@ -30,9 +30,7 @@ services:
       - key: HIGGSFIELD_IMAGE_MODEL_ID
         value: higgsfield-ai/soul/standard         # text-to-image (new presenter)
       - key: PUBLIC_BASE_URL
-        value: https://adswap.onrender.com         # so Higgsfield can fetch product frames
-      - key: HIGGSFIELD_PRODUCT_MODEL_ID
-        value: canvas   # places the uploaded product into a generated presenter scene
+        value: https://adswap.onrender.com   # so Higgsfield can fetch the uploaded product photo
       - key: CLAUDE_MODEL
         value: claude-sonnet-4-20250514
 

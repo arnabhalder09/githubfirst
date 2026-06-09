@@ -96,16 +96,12 @@ async def process_job(job_id: str) -> None:
         frames = extract_frames(video_path, out_dir / "_frames")
         scene_analysis = await claude_analyze_scenes(transcript, frames)
 
-        # Reference image for product-preserving generation. Prefer the product
-        # photo the user uploaded; otherwise fall back to a mid-clip video frame.
+        # If the user uploaded a product photo, seed generation from it so the
+        # exact product appears. Requires PUBLIC_BASE_URL so Higgsfield can fetch it.
         product_image_url = None
         if config.PUBLIC_BASE_URL and job.product_image_path:
             rel = relative_upload(job.product_image_path).replace("\\", "/")
             product_image_url = f"{config.PUBLIC_BASE_URL}/files/uploads/{rel}"
-        elif frames and config.PUBLIC_BASE_URL:
-            ref_frame = frames[len(frames) // 2]  # mid clip — product usually on screen
-            rel = relative_output(ref_frame).replace("\\", "/")
-            product_image_url = f"{config.PUBLIC_BASE_URL}/files/outputs/{rel}"
         job.scene_analysis = json.dumps(scene_analysis)
         _update(db, job, progress=P_AUDIO + P_TRANSCRIBE + P_ANALYZE, stage="generating")
 

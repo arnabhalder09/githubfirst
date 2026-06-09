@@ -177,27 +177,16 @@ async def _real_swap(
     product = (scene_analysis or {}).get("product") or {}
     prod_name = product.get("name") or "the featured product"
     prod_desc = product.get("description") or ""
-
-    # Use the real product image as a reference when an edit model + frame URL are
-    # available (keep product, swap person). Otherwise fall back to describing it.
-    use_reference = bool(config.HIGGSFIELD_PRODUCT_MODEL_ID and product_image_url)
+    hook = script.split(".")[0][:120] if script else "the product"
 
     async with httpx.AsyncClient(timeout=60) as client:
-        _emit(on_stage, "generating_image")
-        if use_reference:
-            image_model = config.HIGGSFIELD_PRODUCT_MODEL_ID
-            image_body = {
-                "image_url": product_image_url,
-                "prompt": (
-                    f"Replace the person in this image with a different {avatar_label} "
-                    f"(a new individual), but keep the product they are holding "
-                    f"completely unchanged — the SAME {prod_name}, identical color, "
-                    f"shape, size, and labeling ({prod_desc}). Casual vertical UGC "
-                    f"selfie style, natural lighting, authentic."
-                ),
-            }
+        if product_image_url:
+            # Product-led: animate the user's REAL product photo directly, so the
+            # exact product appears (it is the seed frame). No presenter-image step.
+            image_url = product_image_url
         else:
-            image_model = config.HIGGSFIELD_IMAGE_MODEL_ID
+            # Presenter-led: generate a new presenter from text, product described.
+            _emit(on_stage, "generating_image")
             image_body = {
                 "prompt": (
                     f"Photorealistic vertical portrait of a {avatar_label}, a UGC "
@@ -209,24 +198,29 @@ async def _real_swap(
                 "aspect_ratio": "9:16",
                 "resolution": "720p",
             }
-        img_json, _ = await _submit_and_poll(client, image_model, image_body, headers)
-        images = img_json.get("images") or []
-        image_url = images[0].get("url") if images else (img_json.get("image") or {}).get("url")
-        if not image_url:
-            raise RuntimeError(f"No image URL returned by image model: {img_json}")
+            img_json, _ = await _submit_and_poll(
+                client, config.HIGGSFIELD_IMAGE_MODEL_ID, image_body, headers
+            )
+            images = img_json.get("images") or []
+            image_url = images[0].get("url") if images else (img_json.get("image") or {}).get("url")
+            if not image_url:
+                raise RuntimeError(f"No image URL returned by image model: {img_json}")
 
-        # Step 2: animate that image into a talking-style UGC clip (image-to-video).
+        # Animate into a UGC-style clip (image-to-video).
         _emit(on_stage, "animating_video")
-        hook = script.split(".")[0][:120] if script else "the product"
-        video_body = {
-            "image_url": image_url,
-            "prompt": (
+        if product_image_url:
+            video_prompt = (
+                f"Cinematic vertical UGC product ad featuring {prod_name}, shown with "
+                f"dynamic camera motion and engaging energy as it is presented and "
+                f"reviewed — \"{hook}\". Keep the product exactly as shown."
+            )
+        else:
+            video_prompt = (
                 f"The {avatar_label} talks to the camera in a casual handheld UGC "
                 f"selfie video, natural head and hand movement, upbeat energy, "
                 f"enthusiastically reviewing the product — \"{hook}\""
-            ),
-            "duration": 5,
-        }
+            )
+        video_body = {"image_url": image_url, "prompt": video_prompt, "duration": 5}
         vid_json, request_id = await _submit_and_poll(
             client, config.HIGGSFIELD_MODEL_ID, video_body, headers
         )

@@ -205,11 +205,10 @@ async def debug_higgsfield() -> dict:
         "base_url": config.HIGGSFIELD_BASE_URL,
         "image_model": config.HIGGSFIELD_IMAGE_MODEL_ID,
         "video_model": config.HIGGSFIELD_MODEL_ID,
-        "product_model": config.HIGGSFIELD_PRODUCT_MODEL_ID or None,
         "public_base_url": config.PUBLIC_BASE_URL or None,
-        "product_preservation_active": bool(
-            config.HIGGSFIELD_PRODUCT_MODEL_ID and config.PUBLIC_BASE_URL
-        ),
+        # Product preservation works by seeding image-to-video with the uploaded
+        # product photo; it just needs PUBLIC_BASE_URL set so Higgsfield can fetch it.
+        "product_seeding_active": bool(config.PUBLIC_BASE_URL),
     }
     probe = f"{config.HIGGSFIELD_BASE_URL}/requests/00000000-0000-0000-0000-000000000000/status"
     try:
