@@ -224,6 +224,56 @@ async def debug_higgsfield() -> dict:
     return info
 
 
+@app.get("/debug/probe")
+async def debug_probe() -> dict:
+    """Find the real API model_id for product/edit models.
+
+    Posts an empty body to candidate ids: 404 = wrong id; 400/422 = correct id
+    (body reveals required params); a queued 2xx = valid (auto-cancelled to save
+    credits).
+    """
+    import httpx
+
+    from higgsfield_service import _auth_header
+
+    candidates = [
+        "canvas", "higgsfield-ai/canvas", "higgsfield-ai/canvas/standard",
+        "banana_placement", "banana-placement",
+        "higgsfield-ai/banana-placement", "higgsfield-ai/banana-placement/standard",
+        "higgsfield-ai/nano-banana-pro", "nano-banana-pro",
+        "higgsfield-ai/nano-banana-pro/standard", "nano_banana_pro_inpaint",
+        "kontext", "higgsfield-ai/kontext",
+    ]
+    headers = {
+        "Authorization": _auth_header(),
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    results = []
+    async with httpx.AsyncClient(timeout=20) as client:
+        for mid in candidates:
+            try:
+                r = await client.post(
+                    f"{config.HIGGSFIELD_BASE_URL}/{mid}", headers=headers, json={}
+                )
+                entry = {"model_id": mid, "status": r.status_code, "body": r.text[:160]}
+                if r.status_code < 300:  # queued — cancel to avoid spending credits
+                    try:
+                        rid = r.json().get("request_id")
+                        if rid:
+                            await client.post(
+                                f"{config.HIGGSFIELD_BASE_URL}/requests/{rid}/cancel",
+                                headers=headers,
+                            )
+                            entry["cancelled"] = True
+                    except Exception:  # noqa: BLE001
+                        pass
+                results.append(entry)
+            except Exception as exc:  # noqa: BLE001
+                results.append({"model_id": mid, "error": str(exc)[:120]})
+    return {"candidates": results}
+
+
 @app.get("/jobs/{job_id}/download")
 def download_all(job_id: str, db: Session = Depends(get_session)) -> StreamingResponse:
     job = _get_job_or_404(db, job_id)
