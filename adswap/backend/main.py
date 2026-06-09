@@ -117,7 +117,7 @@ def _get_job_or_404(db: Session, job_id: str) -> Job:
 
 @app.get("/jobs/{job_id}")
 def get_job(job_id: str, db: Session = Depends(get_session)) -> dict:
-    return _get_job_or_404(db, job_id).to_dict()
+    return _get_job_or_404(db, job_id).to_dict(include_artifacts=True)
 
 
 @app.get("/jobs/{job_id}/status")

@@ -162,7 +162,7 @@ async def _real_swap(
                 f"the camera, natural lighting, holding a product, candid and authentic"
             ),
             "aspect_ratio": "9:16",
-            "resolution": "1080p",
+            "resolution": "720p",
         }
         img_json, _ = await _submit_and_poll(
             client, config.HIGGSFIELD_IMAGE_MODEL_ID, image_body, headers

@@ -37,6 +37,31 @@ function Marker({ state }) {
   return <span className="grid place-items-center h-7 w-7 rounded-full bg-neutral-800 text-neutral-600 text-xs">•</span>;
 }
 
+// Live detail shown under each step as its work product becomes available.
+function stepDetail(step, job) {
+  const t = job.transcript;
+  const a = job.scene_analysis;
+  if (step.key === "transcribing" && t?.text) {
+    const words = t.text.trim().split(/\s+/).length;
+    return `“${t.text.slice(0, 90)}${t.text.length > 90 ? "…" : ""}” · ${words} words`;
+  }
+  if (step.key === "analyzing_scenes" && a) {
+    const segs = a.segments?.length ?? 0;
+    const hooks = a.hooks?.length ?? 0;
+    const cta = a.cta_timestamps?.length ?? 0;
+    const tone = a.tone ? `tone: ${a.tone}` : "";
+    return [tone, `${segs} segments`, `${hooks} hook${hooks === 1 ? "" : "s"}`, `${cta} CTA`]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  if (step.key === "generating") {
+    const active = job.variations.find((v) => v.status !== "complete");
+    if (active) return `now: ${active.label}`;
+    if (job.variations.length) return "all variations done";
+  }
+  return "";
+}
+
 export default function ProcessingSteps({ job }) {
   const current = ORDER.indexOf(job.stage);
   const total = job.num_variations;
@@ -54,10 +79,11 @@ export default function ProcessingSteps({ job }) {
               : "pending";
 
         const showCount = step.key === "generating" && state !== "pending";
+        const detail = state === "pending" ? "" : stepDetail(step, job);
         return (
           <li
             key={step.key}
-            className={`flex items-center gap-3 transition-opacity ${
+            className={`flex items-start gap-3 transition-opacity ${
               state === "pending" ? "opacity-50" : "opacity-100"
             }`}
           >
@@ -69,8 +95,11 @@ export default function ProcessingSteps({ job }) {
                   <span className="text-neutral-500"> · {doneVars}/{total}</span>
                 )}
               </span>
+              {detail && (
+                <p className="text-xs text-neutral-500 mt-0.5 truncate">{detail}</p>
+              )}
             </div>
-            <span className="text-xs text-neutral-600">{step.hint}</span>
+            <span className="text-xs text-neutral-600 pt-0.5">{step.hint}</span>
           </li>
         );
       })}

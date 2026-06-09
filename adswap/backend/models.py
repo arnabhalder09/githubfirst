@@ -58,8 +58,8 @@ class Job(Base):
         order_by="Variation.index",
     )
 
-    def to_dict(self) -> dict:
-        return {
+    def to_dict(self, include_artifacts: bool = False) -> dict:
+        data = {
             "id": self.id,
             "filename": self.filename,
             "num_variations": self.num_variations,
@@ -72,6 +72,14 @@ class Job(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "variations": [v.to_dict() for v in self.variations],
         }
+        if include_artifacts:
+            import json
+
+            data["transcript"] = json.loads(self.transcript) if self.transcript else None
+            data["scene_analysis"] = (
+                json.loads(self.scene_analysis) if self.scene_analysis else None
+            )
+        return data
 
 
 class Variation(Base):

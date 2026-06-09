@@ -89,6 +89,70 @@ export default function Results() {
         </div>
       )}
 
+      {(job.transcript || job.scene_analysis) && (
+        <div className="mt-6 grid md:grid-cols-2 gap-4">
+          {job.transcript?.text && (
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5">
+              <h3 className="text-sm font-medium text-neutral-300">📝 Detected script</h3>
+              <p className="mt-2 text-sm text-neutral-400 leading-relaxed">
+                {job.transcript.text}
+              </p>
+            </div>
+          )}
+          {job.scene_analysis && (
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5">
+              <h3 className="text-sm font-medium text-neutral-300">🧠 Scene analysis</h3>
+              {job.scene_analysis.tone && (
+                <p className="mt-2 text-sm">
+                  <span className="text-neutral-500">Tone:</span>{" "}
+                  <span className="text-neutral-300">{job.scene_analysis.tone}</span>
+                </p>
+              )}
+              {job.scene_analysis.hooks?.length > 0 && (
+                <div className="mt-2 text-sm">
+                  <span className="text-neutral-500">Hooks:</span>
+                  <ul className="mt-1 space-y-1">
+                    {job.scene_analysis.hooks.map((h, i) => (
+                      <li key={i} className="text-neutral-300">
+                        <span className="text-brand tabular-nums">
+                          {Number(h.timestamp ?? 0).toFixed(1)}s
+                        </span>{" "}
+                        — {h.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {job.scene_analysis.cta_timestamps?.length > 0 && (
+                <p className="mt-2 text-sm">
+                  <span className="text-neutral-500">CTA at:</span>{" "}
+                  <span className="text-neutral-300">
+                    {job.scene_analysis.cta_timestamps
+                      .map((t) => `${Number(t).toFixed(1)}s`)
+                      .join(", ")}
+                  </span>
+                </p>
+              )}
+              {job.scene_analysis.segments?.length > 0 && (
+                <p className="mt-2 text-xs text-neutral-500">
+                  {job.scene_analysis.segments.length} segments ·{" "}
+                  {
+                    job.scene_analysis.segments.filter((s) => s.type === "ugc_talking")
+                      .length
+                  }{" "}
+                  talking ·{" "}
+                  {
+                    job.scene_analysis.segments.filter((s) => s.type === "product_broll")
+                      .length
+                  }{" "}
+                  B-roll
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {job.variations.length > 0 && (
         <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {job.variations.map((v) => (
