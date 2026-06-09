@@ -51,10 +51,24 @@ def _write_thumbnail(path: Path, label: str, index: int) -> None:
     path.write_text(svg, encoding="utf-8")
 
 
+def _emit(on_stage, stage: str) -> None:
+    if on_stage:
+        try:
+            on_stage(stage)
+        except Exception:  # noqa: BLE001 — progress reporting must never break generation
+            pass
+
+
 async def _mock_swap(
-    video_path: Path, output_dir: Path, avatar_label: str, variation_index: int
+    video_path: Path, output_dir: Path, avatar_label: str, variation_index: int, on_stage=None
 ) -> dict:
-    await asyncio.sleep(0.5)  # simulate generation latency
+    # Walk the same stages a real run reports, so the UI shows the steps.
+    _emit(on_stage, "generating_image")
+    await asyncio.sleep(1.2)
+    _emit(on_stage, "animating_video")
+    await asyncio.sleep(1.5)
+    _emit(on_stage, "downloading")
+    await asyncio.sleep(0.3)
     out_video = output_dir / f"variation_{variation_index + 1}.mp4"
     shutil.copyfile(video_path, out_video)
     out_thumb = output_dir / f"variation_{variation_index + 1}.svg"
@@ -74,6 +88,7 @@ async def higgsfield_swap_character(
     avatar_style: str,
     variation_index: int,
     output_dir: Path,
+    on_stage=None,
 ) -> dict:
     video_path = Path(video_path)
     output_dir = Path(output_dir)
@@ -81,14 +96,14 @@ async def higgsfield_swap_character(
     avatar_label = avatar_for_variation(avatar_style, variation_index)
 
     if not config.HAS_HIGGSFIELD:
-        return await _mock_swap(video_path, output_dir, avatar_label, variation_index)
+        return await _mock_swap(video_path, output_dir, avatar_label, variation_index, on_stage)
 
     try:
         return await _real_swap(
-            video_path, transcript, avatar_label, variation_index, output_dir
+            video_path, transcript, avatar_label, variation_index, output_dir, on_stage
         )
     except Exception as exc:  # noqa: BLE001 — fall back so one bad call doesn't kill the job
-        result = await _mock_swap(video_path, output_dir, avatar_label, variation_index)
+        result = await _mock_swap(video_path, output_dir, avatar_label, variation_index, on_stage)
         result["generation_error"] = str(exc)
         return result
 
@@ -143,6 +158,7 @@ async def _real_swap(
     avatar_label: str,
     variation_index: int,
     output_dir: Path,
+    on_stage=None,
 ) -> dict:
     import httpx
 
@@ -155,6 +171,7 @@ async def _real_swap(
 
     async with httpx.AsyncClient(timeout=60) as client:
         # Step 1: generate a new presenter image (text-to-image).
+        _emit(on_stage, "generating_image")
         image_body = {
             "prompt": (
                 f"Photorealistic vertical portrait of a {avatar_label}, a UGC content "
@@ -173,6 +190,7 @@ async def _real_swap(
             raise RuntimeError(f"No image URL returned by image model: {img_json}")
 
         # Step 2: animate that image into a talking-style UGC clip (image-to-video).
+        _emit(on_stage, "animating_video")
         hook = script.split(".")[0][:120] if script else "the product"
         video_body = {
             "image_url": image_url,
@@ -191,6 +209,7 @@ async def _real_swap(
             raise RuntimeError(f"No video URL returned by video model: {vid_json}")
 
         # Step 3: download the result.
+        _emit(on_stage, "downloading")
         out_video = output_dir / f"variation_{variation_index + 1}.mp4"
         dl = await client.get(video_url)
         _raise_for_body(dl)

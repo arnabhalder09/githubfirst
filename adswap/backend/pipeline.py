@@ -107,6 +107,7 @@ async def process_job(job_id: str) -> None:
                 label=f"Variation {i + 1} · {avatar_for_variation(job.avatar_style, i)}",
                 avatar_style=job.avatar_style,
                 status="pending",
+                stage="queued",
             )
             db.add(v)
             variations.append(v)
@@ -116,13 +117,19 @@ async def process_job(job_id: str) -> None:
 
         # Step 4: generate each variation.
         for i, v in enumerate(variations):
+            def _on_stage(stage: str, _v=v) -> None:
+                _v.stage = stage
+                db.commit()
+
             result = await higgsfield_swap_character(
                 video_path=video_path,
                 transcript=transcript,
                 avatar_style=job.avatar_style,
                 variation_index=i,
                 output_dir=out_dir,
+                on_stage=_on_stage,
             )
+            v.stage = "done"
             v.status = result.get("status", "complete")
             v.external_job_id = result.get("external_job_id")
             # Surface a fallback/error note: real generation failed (copied

@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 
+// Real backend sub-steps → what to show. step is 1 or 2 of 2.
+const STAGE_INFO = {
+  queued: { icon: "⏳", text: "Queued", step: 0 },
+  generating_image: { icon: "🎨", text: "Generating the new presenter", step: 1 },
+  animating_video: { icon: "🎬", text: "Animating into video", step: 2 },
+  downloading: { icon: "⬇️", text: "Finalizing the clip", step: 2 },
+};
+
+// Fallback rotating captions when no live stage is reported yet.
 const GEN_MESSAGES = [
   "Casting a new presenter…",
-  "Generating the avatar…",
+  "Warming up the models…",
   "Framing the shot…",
-  "Animating the scene…",
-  "Adding natural motion…",
-  "Rendering the clip…",
 ];
 
-function GeneratingTile() {
+function GeneratingTile({ stage }) {
   const [msg, setMsg] = useState(0);
   const [secs, setSecs] = useState(0);
   useEffect(() => {
@@ -21,11 +27,28 @@ function GeneratingTile() {
       clearInterval(s);
     };
   }, []);
+
+  const info = STAGE_INFO[stage];
   return (
     <div className="shimmer relative w-full h-full overflow-hidden bg-gradient-to-br from-neutral-800 via-neutral-900 to-neutral-800">
-      <div className="relative z-10 flex flex-col items-center justify-center h-full gap-3 px-4 text-center">
-        <span className="text-3xl animate-bounce">🎬</span>
-        <span className="text-sm font-medium text-neutral-200">{GEN_MESSAGES[msg]}</span>
+      <div className="relative z-10 flex flex-col items-center justify-center h-full gap-2.5 px-4 text-center">
+        <span className="text-3xl animate-bounce">{info?.icon ?? "🎬"}</span>
+        <span className="text-sm font-medium text-neutral-100">
+          {info ? info.text : GEN_MESSAGES[msg]}
+        </span>
+        {info?.step > 0 && (
+          <div className="flex items-center gap-1.5">
+            {[1, 2].map((n) => (
+              <span
+                key={n}
+                className={`h-1.5 w-6 rounded-full ${
+                  n <= info.step ? "bg-brand" : "bg-neutral-700"
+                }`}
+              />
+            ))}
+            <span className="ml-1 text-[11px] text-neutral-500">step {info.step} of 2</span>
+          </div>
+        )}
         <div className="w-32 h-1 rounded-full bg-neutral-700/70 overflow-hidden">
           <div className="bar-indeterminate h-full w-2/5 rounded-full bg-brand" />
         </div>
@@ -45,7 +68,7 @@ export default function VideoPlayer({ variation }) {
         {videoUrl ? (
           <video src={videoUrl} poster={posterUrl} controls className="w-full h-full object-contain" />
         ) : (
-          <GeneratingTile />
+          <GeneratingTile stage={variation.stage} />
         )}
       </div>
       <div className="flex items-center justify-between gap-2 p-3">

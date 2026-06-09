@@ -92,6 +92,8 @@ class Variation(Base):
     avatar_style = Column(String, nullable=False)
 
     status = Column(String, nullable=False, default="pending")  # pending|complete|failed
+    # Sub-step within generation, surfaced live to the UI.
+    stage = Column(String, nullable=True)  # queued|generating_image|animating_video|downloading
     video_path = Column(String, nullable=True)  # path on disk (relative to OUTPUT_DIR)
     thumbnail_path = Column(String, nullable=True)
     external_job_id = Column(String, nullable=True)  # Higgsfield job id when applicable
@@ -109,6 +111,7 @@ class Variation(Base):
             "label": self.label,
             "avatar_style": self.avatar_style,
             "status": self.status,
+            "stage": self.stage,
             "video_url": f"/files/outputs/{self.video_path}" if self.video_path else None,
             "thumbnail_url": f"/files/outputs/{self.thumbnail_path}"
             if self.thumbnail_path
