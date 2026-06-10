@@ -14,6 +14,7 @@ import config
 from claude_service import claude_analyze_scenes
 from database import SessionLocal
 from higgsfield_service import avatar_for_variation, higgsfield_swap_character
+from image_compose_service import compose_presenter_image
 from models import Job, JobStatus, Variation
 from storage import job_output_dir, relative_output, relative_upload
 from whisper_service import whisper_transcribe
@@ -96,12 +97,13 @@ async def process_job(job_id: str) -> None:
         frames = extract_frames(video_path, out_dir / "_frames")
         scene_analysis = await claude_analyze_scenes(transcript, frames)
 
-        # If the user uploaded a product photo, seed generation from it so the
-        # exact product appears. Requires PUBLIC_BASE_URL so Higgsfield can fetch it.
-        product_image_url = None
+        # If the user uploaded a product photo, we'll compose a presenter holding
+        # it (OpenAI) per variation, then animate. Raw-product URL is the fallback
+        # seed when OpenAI is unavailable. Requires PUBLIC_BASE_URL for fetching.
+        raw_product_url = None
         if config.PUBLIC_BASE_URL and job.product_image_path:
             rel = relative_upload(job.product_image_path).replace("\\", "/")
-            product_image_url = f"{config.PUBLIC_BASE_URL}/files/uploads/{rel}"
+            raw_product_url = f"{config.PUBLIC_BASE_URL}/files/uploads/{rel}"
         job.scene_analysis = json.dumps(scene_analysis)
         _update(db, job, progress=P_AUDIO + P_TRANSCRIBE + P_ANALYZE, stage="generating")
 
@@ -129,6 +131,24 @@ async def process_job(job_id: str) -> None:
                 _v.stage = stage
                 db.commit()
 
+            # Seed image: compose a presenter holding the REAL product (OpenAI),
+            # else fall back to the raw product photo, else None (Higgsfield gen).
+            seed_image_url = None
+            if job.product_image_path and config.HAS_OPENAI and config.PUBLIC_BASE_URL:
+                _on_stage("composing_image")
+                composed = out_dir / f"presenter_{i + 1}.png"
+                ok = await compose_presenter_image(
+                    job.product_image_path,
+                    avatar_for_variation(job.avatar_style, i),
+                    scene_analysis,
+                    composed,
+                )
+                if ok:
+                    rel = relative_output(composed).replace("\\", "/")
+                    seed_image_url = f"{config.PUBLIC_BASE_URL}/files/outputs/{rel}"
+            if seed_image_url is None:
+                seed_image_url = raw_product_url  # may be None
+
             result = await higgsfield_swap_character(
                 video_path=video_path,
                 transcript=transcript,
@@ -137,7 +157,7 @@ async def process_job(job_id: str) -> None:
                 output_dir=out_dir,
                 on_stage=_on_stage,
                 scene_analysis=scene_analysis,
-                product_image_url=product_image_url,
+                seed_image_url=seed_image_url,
             )
             v.stage = "done"
             v.status = result.get("status", "complete")

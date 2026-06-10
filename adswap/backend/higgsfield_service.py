@@ -90,7 +90,7 @@ async def higgsfield_swap_character(
     output_dir: Path,
     on_stage=None,
     scene_analysis: dict | None = None,
-    product_image_url: str | None = None,
+    seed_image_url: str | None = None,
 ) -> dict:
     video_path = Path(video_path)
     output_dir = Path(output_dir)
@@ -103,7 +103,7 @@ async def higgsfield_swap_character(
     try:
         return await _real_swap(
             video_path, transcript, avatar_label, variation_index, output_dir,
-            on_stage, scene_analysis, product_image_url,
+            on_stage, scene_analysis, seed_image_url,
         )
     except Exception as exc:  # noqa: BLE001 — fall back so one bad call doesn't kill the job
         result = await _mock_swap(video_path, output_dir, avatar_label, variation_index, on_stage)
@@ -163,7 +163,7 @@ async def _real_swap(
     output_dir: Path,
     on_stage=None,
     scene_analysis: dict | None = None,
-    product_image_url: str | None = None,
+    seed_image_url: str | None = None,
 ) -> dict:
     import httpx
 
@@ -180,10 +180,10 @@ async def _real_swap(
     hook = script.split(".")[0][:120] if script else "the product"
 
     async with httpx.AsyncClient(timeout=60) as client:
-        if product_image_url:
-            # Product-led: animate the user's REAL product photo directly, so the
-            # exact product appears (it is the seed frame). No presenter-image step.
-            image_url = product_image_url
+        if seed_image_url:
+            # Seed already shows a presenter holding the real product (composed by
+            # OpenAI), or the raw product photo — animate it directly.
+            image_url = seed_image_url
         else:
             # Presenter-led: generate a new presenter from text, product described.
             _emit(on_stage, "generating_image")
@@ -206,20 +206,14 @@ async def _real_swap(
             if not image_url:
                 raise RuntimeError(f"No image URL returned by image model: {img_json}")
 
-        # Animate into a UGC-style clip (image-to-video).
+        # Animate the seed image into a talking-style UGC clip (image-to-video).
         _emit(on_stage, "animating_video")
-        if product_image_url:
-            video_prompt = (
-                f"Cinematic vertical UGC product ad featuring {prod_name}, shown with "
-                f"dynamic camera motion and engaging energy as it is presented and "
-                f"reviewed — \"{hook}\". Keep the product exactly as shown."
-            )
-        else:
-            video_prompt = (
-                f"The {avatar_label} talks to the camera in a casual handheld UGC "
-                f"selfie video, natural head and hand movement, upbeat energy, "
-                f"enthusiastically reviewing the product — \"{hook}\""
-            )
+        video_prompt = (
+            f"The {avatar_label} talks to the camera in a casual handheld UGC "
+            f"selfie video, natural head and hand movement, upbeat energy, "
+            f"enthusiastically reviewing the product — \"{hook}\". "
+            f"Keep the product exactly as shown."
+        )
         video_body = {"image_url": image_url, "prompt": video_prompt, "duration": 5}
         vid_json, request_id = await _submit_and_poll(
             client, config.HIGGSFIELD_MODEL_ID, video_body, headers

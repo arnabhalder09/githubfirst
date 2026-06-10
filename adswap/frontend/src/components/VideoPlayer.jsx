@@ -4,6 +4,7 @@ import { api } from "../lib/api.js";
 // Real backend sub-steps → what to show. step is 1 or 2 of 2.
 const STAGE_INFO = {
   queued: { icon: "⏳", text: "Queued", step: 0 },
+  composing_image: { icon: "🎨", text: "Composing presenter with your product", step: 1 },
   generating_image: { icon: "🎨", text: "Generating the new presenter", step: 1 },
   animating_video: { icon: "🎬", text: "Animating into video", step: 2 },
   downloading: { icon: "⬇️", text: "Finalizing the clip", step: 2 },

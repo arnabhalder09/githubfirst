@@ -25,6 +25,9 @@ HIGGSFIELD_API_KEY = os.getenv("HIGGSFIELD_API_KEY", "").strip()
 # Model used for scene analysis.
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 
+# OpenAI image model used to compose a presenter holding the real product.
+OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
+
 # Higgsfield API. Auth is "Key {key}:{secret}"; requests POST to /{model_id}.
 HIGGSFIELD_BASE_URL = os.getenv("HIGGSFIELD_BASE_URL", "https://platform.higgsfield.ai").rstrip("/")
 HIGGSFIELD_API_SECRET = os.getenv("HIGGSFIELD_API_SECRET", "").strip()
