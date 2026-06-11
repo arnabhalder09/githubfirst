@@ -23,14 +23,28 @@ BASE_URL = config.HIGGSFIELD_BASE_URL
 # Maps the UI avatar-style choices to (label, descriptive prompt) pairs. The
 # diverse cast cycles through a small roster so each variation looks distinct.
 AVATAR_STYLES = {
-    "realistic_female": ["realistic female presenter"],
-    "realistic_male": ["realistic male presenter"],
+    "realistic_female": [
+        "a friendly woman in her late 20s with long wavy brown hair",
+        "a confident woman in her 30s with a short blonde bob",
+        "a cheerful young woman with curly hair and glasses",
+        "a stylish woman with straight dark hair and gold hoop earrings",
+        "a warm, approachable woman with freckles and a messy bun",
+    ],
+    "realistic_male": [
+        "a friendly man in his 20s with short tidy hair",
+        "a confident man in his 30s with a trimmed beard",
+        "a cheerful young man with glasses and a fade haircut",
+        "a stylish man with stubble and a casual hoodie",
+        "an approachable man with wavy hair and a warm smile",
+    ],
     "diverse_cast": [
-        "realistic female presenter",
-        "realistic male presenter",
-        "realistic non-binary presenter",
-        "older adult presenter",
-        "young adult presenter",
+        "a friendly young Black woman with natural curls",
+        "a confident East Asian man in his 30s with glasses",
+        "a cheerful Latina woman with long wavy hair",
+        "a warm South Asian man with a trimmed beard",
+        "an energetic woman with short blonde hair",
+        "a relaxed older man with grey hair and a friendly smile",
+        "a stylish non-binary person with a colorful undercut",
     ],
 }
 
@@ -209,12 +223,17 @@ async def _real_swap(
         # Animate the seed image into a talking-style UGC clip (image-to-video).
         _emit(on_stage, "animating_video")
         video_prompt = (
-            f"The {avatar_label} talks to the camera in a casual handheld UGC "
-            f"selfie video, natural head and hand movement, upbeat energy, "
-            f"enthusiastically reviewing the product — \"{hook}\". "
-            f"Keep the product exactly as shown."
+            f"Dynamic vertical UGC ad: the {avatar_label} speaks directly to the "
+            f"camera with natural lip movement, expressive gestures and upbeat energy, "
+            f"holding the product up to show it clearly. Subtle handheld camera motion, "
+            f"bright and authentic, social-media ready, enthusiastically reviewing it — "
+            f"\"{hook}\". Keep the product identical to the image."
         )
-        video_body = {"image_url": image_url, "prompt": video_prompt, "duration": 5}
+        video_body = {
+            "image_url": image_url,
+            "prompt": video_prompt,
+            "duration": config.HIGGSFIELD_VIDEO_DURATION,
+        }
         vid_json, request_id = await _submit_and_poll(
             client, config.HIGGSFIELD_MODEL_ID, video_body, headers
         )

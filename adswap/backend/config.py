@@ -27,6 +27,8 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 
 # OpenAI image model used to compose a presenter holding the real product.
 OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
+# Image quality: low | medium | high | auto. Higher = better, pricier.
+OPENAI_IMAGE_QUALITY = os.getenv("OPENAI_IMAGE_QUALITY", "high")
 
 # Higgsfield API. Auth is "Key {key}:{secret}"; requests POST to /{model_id}.
 HIGGSFIELD_BASE_URL = os.getenv("HIGGSFIELD_BASE_URL", "https://platform.higgsfield.ai").rstrip("/")
@@ -38,6 +40,8 @@ HIGGSFIELD_IMAGE_MODEL_ID = os.getenv(
 HIGGSFIELD_MODEL_ID = os.getenv(
     "HIGGSFIELD_MODEL_ID", "higgsfield-ai/dop/standard"
 ).strip().strip("/")
+# Length of each generated video clip, in seconds.
+HIGGSFIELD_VIDEO_DURATION = int(os.getenv("HIGGSFIELD_VIDEO_DURATION", "5"))
 # Image-edit / reference model that PRESERVES the real product (keep product,
 # swap the person). When set together with PUBLIC_BASE_URL, the pipeline feeds a
 # frame of the real product as the reference image. Empty → description-only mode.

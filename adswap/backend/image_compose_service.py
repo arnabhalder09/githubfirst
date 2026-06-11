@@ -22,12 +22,15 @@ def _build_prompt(avatar_label: str, scene_analysis: dict | None) -> str:
     prod_name = product.get("name") or "the product shown"
     prod_desc = product.get("description") or ""
     return (
-        f"A photorealistic vertical (9:16) UGC-style selfie photo of a {avatar_label}, "
-        f"a content creator filming a product review, smiling at the camera in natural "
-        f"lighting. They are holding THIS EXACT product from the reference image — "
-        f"{prod_name}. Keep the product completely unchanged: identical shape, color, "
-        f"size, material, and any text or logo ({prod_desc}). Casual, authentic, "
-        f"handheld feel."
+        f"A photorealistic vertical (9:16) UGC-style selfie photo of {avatar_label}, "
+        f"a content creator filming a product review. They make eye contact and smile "
+        f"warmly at the camera, holding THIS EXACT product from the reference image up "
+        f"near their face so it is clearly visible — {prod_name}. "
+        f"The product MUST stay completely identical to the reference: same shape, "
+        f"color, size, proportions, material, and every text or logo ({prod_desc}). "
+        f"Do not redesign, recolor, or restyle the product. Soft natural lighting, "
+        f"sharp focus on both the face and the product, clean modern background, "
+        f"authentic handheld feel, high-quality social-media ad look."
     )
 
 
@@ -54,7 +57,7 @@ async def compose_presenter_image(
                 image=fh,
                 prompt=prompt,
                 size="1024x1536",  # portrait / vertical
-                quality="medium",
+                quality=config.OPENAI_IMAGE_QUALITY,
             )
         b64 = resp.data[0].b64_json
         if not b64:
