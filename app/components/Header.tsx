@@ -27,6 +27,11 @@ export default function Header() {
             {item}
           </button>
         ))}
+        <a href="/scraper"
+          className="px-3 py-1.5 rounded-lg text-xs transition-all font-medium"
+          style={{ color: "#34d399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)" }}>
+          GHL Leads
+        </a>
       </nav>
 
       {/* Right */}
