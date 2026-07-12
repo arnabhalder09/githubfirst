@@ -1,0 +1,5 @@
+node_modules/
+meta-lookalike-bot/node_modules/
+meta-lookalike-bot/auth/meta-session.json
+meta-lookalike-bot/.env
+meta-lookalike-bot/error-screenshot.png

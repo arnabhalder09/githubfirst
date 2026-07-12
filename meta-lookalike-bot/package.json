@@ -1,0 +1,21 @@
+{
+  "name": "meta-lookalike-bot",
+  "version": "1.0.0",
+  "description": "Playwright automation for Meta Lookalike Audience creation",
+  "scripts": {
+    "save-auth": "ts-node auth/save-auth.ts",
+    "create": "ts-node scripts/create-lookalike.ts",
+    "create:visible": "cross-env HEADLESS=false ts-node scripts/create-lookalike.ts",
+    "create:debug": "cross-env HEADLESS=false SLOW_MO=800 ts-node scripts/create-lookalike.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "playwright": "^1.44.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "cross-env": "^7.0.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

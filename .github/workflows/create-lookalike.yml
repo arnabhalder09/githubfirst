@@ -1,0 +1,69 @@
+name: Create Meta Lookalike Audience
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_audience_name:
+        description: 'Source audience name (partial match)'
+        required: false
+        default: 'Purchasers'
+      target_countries:
+        description: 'Target countries (comma-separated)'
+        required: false
+        default: 'United States,Australia'
+      audience_size:
+        description: 'Lookalike size (1-10)'
+        required: false
+        default: '1'
+
+jobs:
+  create-lookalike:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: meta-lookalike-bot/package-lock.json
+
+      - name: Install dependencies
+        working-directory: meta-lookalike-bot
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: meta-lookalike-bot
+        run: npx playwright install chromium --with-deps
+
+      - name: Decode session file
+        working-directory: meta-lookalike-bot
+        run: |
+          mkdir -p auth
+          echo "${{ secrets.META_SESSION_B64 }}" | base64 -d > auth/meta-session.json
+          echo "Session file restored"
+
+      - name: Create Lookalike Audience
+        working-directory: meta-lookalike-bot
+        env:
+          SOURCE_AUDIENCE_NAME: ${{ github.event.inputs.source_audience_name }}
+          TARGET_COUNTRIES: ${{ github.event.inputs.target_countries }}
+          AUDIENCE_SIZE: ${{ github.event.inputs.audience_size }}
+          AD_ACCOUNT_ID: ${{ secrets.AD_ACCOUNT_ID }}
+          HEADLESS: 'true'
+          SLOW_MO: '200'
+        run: npm run create
+
+      - name: Upload error screenshot
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshot
+          path: meta-lookalike-bot/error-screenshot.png
+          if-no-files-found: ignore
