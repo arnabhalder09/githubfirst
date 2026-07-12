@@ -27,11 +27,13 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("upload");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoName, setVideoName] = useState<string>("");
+  const [videoDuration, setVideoDuration] = useState<number>(0);
   const hasVideo = !!videoUrl;
 
-  const handleVideoUploaded = (file: File, url: string) => {
+  const handleVideoUploaded = (file: File, url: string, duration: number) => {
     setVideoUrl(url);
     setVideoName(file.name);
+    setVideoDuration(duration);
     setActiveTab("edit");
   };
 
@@ -110,7 +112,7 @@ export default function Home() {
             {activeTab === "ugc" && (
               <div className="space-y-5">
                 <SectionHeader title="UGC Character Swap" desc="Replace the creator with an AI character — same or new script" />
-                <UGCReplacer hasVideo={hasVideo} />
+                <UGCReplacer hasVideo={hasVideo} videoDuration={videoDuration} />
               </div>
             )}
 
