@@ -12,7 +12,9 @@
   --glow: rgba(109,40,217,0.25);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+@layer base {
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+}
 html { color-scheme: dark; }
 
 body {
