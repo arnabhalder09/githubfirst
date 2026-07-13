@@ -15,6 +15,25 @@ Two ready-to-upload 1080×1080 feed/story images are in `marketing/ads/`:
 
 Both are square (1:1), which Meta safely crops for Feed, Reels, and Stories placements.
 
+### Video ad
+
+`marketing/ads/hvac-ad-15s.mp4` — a 15.6s, 1080×1080, silent video ad: slow Ken Burns
+zoom on the emergency creative → crossfade to the compare-quotes creative → crossfade
+to a closing CTA card. Built programmatically (ffmpeg) from the two static creatives
+above, since no video-generation API key is configured in this environment.
+
+- It's silent by design — Meta Feed/Reels autoplay muted by default, and all copy is
+  baked into the frame as on-screen text, so it works with sound off.
+- Pair it with campaign #1 (Emergency) or run it as a top-of-funnel awareness ad
+  alongside the static images — video tends to get cheaper reach/CPMs on Meta than
+  single images right now.
+- This repo already has a real AI video generation integration built in
+  (`lib/higgsfield.ts`, Higgsfield Marketing Studio — UGC/testimonial-style ad video,
+  not just Ken-Burns-on-a-static-image) but it needs a `HIGGSFIELD_API_KEY` to call.
+  Provide one and I can generate an actual UGC-style ad video (e.g. an AI presenter
+  reacting to the AC breaking, then pitching the free quote) using the app's own
+  Generate tab instead of this simpler slideshow version.
+
 ## Ad copy
 
 ### 1. Emergency / hot-climate (run now — see targeting below)
