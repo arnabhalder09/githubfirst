@@ -6,6 +6,26 @@ your ad angle and the lead form captures attribution.
 
 `utm_content` variants wired up on the page: `default`, `emergency`, `savings`, `install`.
 
+## Lead delivery (GoHighLevel)
+
+`/api/hvac-leads` upserts every submitted lead as a GHL contact (`lib/ghl.ts`), tagged
+`hvac-lead`, the service requested, the state, and the utm_campaign — so your call
+automation workflow can trigger off those tags. Requires two env vars (set in
+`.env.local` for local dev, or your host's environment settings in production —
+**never commit these**):
+
+- `GHL_API_KEY` — a GHL Private Integration token (`pit-...`), from Settings →
+  Private Integrations in the sub-account, scoped to `contacts.write`/`contacts.readonly`.
+- `GHL_LOCATION_ID` — the sub-account's Location ID, from Settings → Business Profile.
+
+If either is missing, the lead still submits successfully to the visitor — the GHL
+push is best-effort and only logs an error server-side, so a GHL outage or
+misconfiguration never blocks someone from getting through the form.
+
+Custom fields (e.g. zip code, exact service) aren't sent yet since GHL's field keys
+are account-specific — add them to the `body` in `lib/ghl.ts` once you confirm the
+keys under Settings → Custom Fields for this location.
+
 ## Creative
 
 Two ready-to-upload 1080×1080 feed/story images are in `marketing/ads/`:

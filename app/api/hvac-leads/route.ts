@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { pushLeadToGhl } from "@/lib/ghl";
 
 const SERVICES = new Set([
   "ac_repair",
@@ -86,9 +87,17 @@ export async function POST(request: NextRequest) {
     receivedAt: new Date().toISOString(),
   };
 
-  // In production, this would forward to a CRM/webhook (e.g. GoHighLevel, HubSpot)
-  // and fire the Meta Conversions API "Lead" event server-side.
   console.log("[hvac-leads] new lead:", lead);
+
+  // Push to GoHighLevel so the lead lands as a contact and fires the call
+  // automation workflow there. Never blocks/fails the lead submission itself.
+  const ghlResult = await pushLeadToGhl(lead);
+  if (!ghlResult.ok) {
+    console.error("[hvac-leads] GHL push failed:", ghlResult.error);
+  }
+
+  // In production this would also fire the Meta Conversions API "Lead" event
+  // server-side.
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }
