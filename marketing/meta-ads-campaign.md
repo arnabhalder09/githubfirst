@@ -87,6 +87,27 @@ Prep campaign #4 to launch as temperatures drop, targeting:
 
 Don't spend on furnace messaging in these states yet — it's summer, intent is near zero. Revisit this doc in September to flip the budget split.
 
+## Demographics & detailed targeting
+
+Set at the **Ad Set level → Audience → Detailed Targeting** (demographics live under
+the "Browse" categories there, not a separate page).
+
+- **Age:** 30–65+. Homeownership skews older; exclude 18–24 (mostly renters).
+- **Home Ownership:** Demographics → Home → **Homeowners**. This is the single
+  highest-leverage filter for HVAC — it excludes renters who would never book a
+  repair or install.
+- **Household Income (optional):** Demographics → Home → Household Income, top 50%,
+  if you want to bias campaign #3 (install/replacement) toward higher-ticket leads.
+- **Life Events (use for campaign #3):** "Newly moved" / "New homeowner" — people who
+  just bought a house often need HVAC service or replacement soon.
+- **Interests (light layer only):** Home improvement, HVAC brands (Trane, Carrier,
+  Lennox, Rheem), Angi, HomeAdvisor, Nextdoor.
+- **Gender:** leave broad/all — no strong skew for HVAC decision-makers.
+
+Start with just **Homeownership + age 30–65 + the hot-state geos above**, and let
+Meta's Advantage+ audience expansion find the rest. Stacking too many manual interest
+layers tends to shrink reach and raise CPMs without improving lead quality.
+
 ## Suggested initial split (now, July–Sept)
 
 - 60% budget → Emergency/hot-climate (#1)
